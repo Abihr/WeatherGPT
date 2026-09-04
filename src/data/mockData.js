@@ -110,6 +110,25 @@ export const friends = [
       rain: 85,
     },
   },
+  {
+    id: "u_ankona",
+    name: "Ankona Bagchi",
+    username: "ankonabagchi123",
+    photoURL: null,
+    location: "Dankuni",
+    distanceKm: 1890,
+    weatherSharing: true,
+    locationSharing: "off",
+    weather: {
+      icon: "rain",
+      temp: 29,
+      condition: "Light Rain",
+      feelsLike: 33,
+      humidity: 88,
+      wind: 18,
+      rain: 85,
+    },
+  },
 ];
 
 export const receivedRequests = [

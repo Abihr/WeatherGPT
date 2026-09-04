@@ -1,6 +1,17 @@
 import { NavLink } from "react-router-dom";
-import { Home, Users, Inbox, Map, RefreshCw, Bell, User, Settings, CloudSun } from "lucide-react";
+import {
+  Home,
+  Users,
+  Inbox,
+  Map,
+  RefreshCw,
+  Bell,
+  User,
+  Settings,
+  CloudSun,
+} from "lucide-react";
 import { useApp } from "../context/AppContext";
+import logo from "../assets/logo_simple.png";
 
 const links = [
   { to: "/", label: "Home", icon: Home },
@@ -17,13 +28,43 @@ export default function Sidebar() {
 
   return (
     <aside className="hidden md:flex md:flex-col w-64 shrink-0 h-screen sticky top-0 border-r border-sky-100 bg-white/70 backdrop-blur-sm px-4 py-6">
-      <div className="flex items-center gap-2 px-2 mb-8">
-        <span className="h-9 w-9 rounded-xl2 bg-hero-gradient flex items-center justify-center shadow-soft">
-          <CloudSun size={19} className="text-white" strokeWidth={2.2} />
+      <div className="flex items-center gap-3 px-2 mb-8">
+        <div
+          className="
+    w-15 h-15
+    p-1
+    rounded-2xl
+    shadow-sm
+    flex items-center justify-center
+    overflow-hidden
+  "
+        >
+          <img
+            src={logo}
+            className="
+        w-full hfull
+        object-cover
+        transition-transform duration-200
+        hover:scale-110
+      "
+            alt="WeatherCircle logo"
+          />
+        </div>
+
+        <span
+          className="
+    font-display
+    font-extrabold
+    text-lg
+    text-ink-900
+    tracking-tight
+  "
+        >
+          WeatherCircle
         </span>
-        <span className="font-display font-extrabold text-lg text-ink-900 tracking-tight">WeatherCircle</span>
       </div>
 
+      {/* <CloudSun size={19} className="text-white" strokeWidth={2.2} /> */}
       <nav className="flex-1 flex flex-col gap-1">
         {links.map(({ to, label, icon: Icon }) => (
           <NavLink
@@ -54,7 +95,9 @@ export default function Sidebar() {
           to="/settings"
           className={({ isActive }) =>
             `flex items-center gap-3 px-3.5 py-2.5 rounded-xl2 text-sm font-medium transition-colors ${
-              isActive ? "bg-sky-100 text-sky-700" : "text-ink-500 hover:bg-sky-50 hover:text-ink-800"
+              isActive
+                ? "bg-sky-100 text-sky-700"
+                : "text-ink-500 hover:bg-sky-50 hover:text-ink-800"
             }`
           }
         >
