@@ -9,7 +9,7 @@ app.use(express.json());
 
 app.get("/api/test", (req, res) => {
     res.json({
-        message: "Backend is connected!"
+        message: "Finally so it works! This is the backend responding to the frontend.",
     });
 });
 
