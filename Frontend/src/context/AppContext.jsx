@@ -1,4 +1,11 @@
-import { createContext, useCallback, useContext, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useState,
+  useEffect,
+} from "react";
+
 import {
   currentUser as initialUser,
   friends as initialFriends,
@@ -8,6 +15,7 @@ import {
   weatherAlerts,
   searchResultsPool,
 } from "../data/mockData";
+
 import * as fs from "../firebase/firestore";
 import { getCurrentWeather } from "../services/weatherService";
 import { getCurrentPosition } from "../services/locationService";
@@ -28,7 +36,9 @@ export function AppProvider({ children }) {
 
   const pushToast = useCallback((message, tone = "success") => {
     const id = ++toastId;
+
     setToasts((t) => [...t, { id, message, tone }]);
+
     setTimeout(() => {
       setToasts((t) => t.filter((toast) => toast.id !== id));
     }, 3200);
@@ -40,22 +50,40 @@ export function AppProvider({ children }) {
 
   const detectLocation = useCallback(async () => {
     setLocating(true);
+
     try {
       const { latitude, longitude } = await getCurrentPosition();
+
       await fs.updateUserLocation(user.id, latitude, longitude);
+
       const weather = await getCurrentWeather(latitude, longitude);
-      setUser((u) => ({ ...u, latitude, longitude, weather }));
+
+      setUser((u) => ({
+        ...u,
+        latitude,
+        longitude,
+        weather,
+      }));
+
       pushToast("Location updated");
     } catch (e) {
+      console.error("Location/weather error:", e);
       pushToast("Couldn't access your location", "error");
     } finally {
       setLocating(false);
     }
   }, [user.id, pushToast]);
 
+  // Automatically get the user's location and real weather
+  // when the app starts.
+  useEffect(() => {
+    detectLocation();
+  }, [detectLocation]);
+
   const sendRequest = useCallback(
     async (person) => {
       await fs.sendFriendRequest(user.id, person.id);
+
       setSent((s) => [
         ...s,
         {
@@ -69,6 +97,7 @@ export function AppProvider({ children }) {
           createdAt: new Date().toISOString(),
         },
       ]);
+
       pushToast("Friend request sent");
     },
     [user.id, pushToast],
@@ -77,7 +106,9 @@ export function AppProvider({ children }) {
   const cancelRequest = useCallback(
     async (requestId) => {
       await fs.cancelFriendRequest(requestId);
+
       setSent((s) => s.filter((r) => r.requestId !== requestId));
+
       pushToast("Request cancelled");
     },
     [pushToast],
@@ -90,9 +121,11 @@ export function AppProvider({ children }) {
         user.id,
         request.senderId,
       );
+
       setReceived((r) =>
         r.filter((req) => req.requestId !== request.requestId),
       );
+
       setFriendsList((f) => [
         ...f,
         {
@@ -115,6 +148,7 @@ export function AppProvider({ children }) {
           },
         },
       ]);
+
       pushToast("Friend request accepted");
     },
     [user.id, pushToast],
@@ -123,7 +157,11 @@ export function AppProvider({ children }) {
   const rejectRequest = useCallback(
     async (requestId) => {
       await fs.rejectFriendRequest(requestId);
-      setReceived((r) => r.filter((req) => req.requestId !== requestId));
+
+      setReceived((r) =>
+        r.filter((req) => req.requestId !== requestId),
+      );
+
       pushToast("Request rejected");
     },
     [pushToast],
@@ -132,7 +170,9 @@ export function AppProvider({ children }) {
   const removeFriend = useCallback(
     async (friendId) => {
       await fs.removeFriend(friendId);
+
       setFriendsList((f) => f.filter((fr) => fr.id !== friendId));
+
       pushToast("Friend removed");
     },
     [pushToast],
@@ -141,9 +181,19 @@ export function AppProvider({ children }) {
   const blockUserById = useCallback(
     async (person) => {
       await fs.blockUser(user.id, person.id);
-      setFriendsList((f) => f.filter((fr) => fr.id !== person.id));
-      setReceived((r) => r.filter((req) => req.senderId !== person.id));
-      setSent((s) => s.filter((req) => req.receiverId !== person.id));
+
+      setFriendsList((f) =>
+        f.filter((fr) => fr.id !== person.id),
+      );
+
+      setReceived((r) =>
+        r.filter((req) => req.senderId !== person.id),
+      );
+
+      setSent((s) =>
+        s.filter((req) => req.receiverId !== person.id),
+      );
+
       setBlocked((b) => [
         ...b,
         {
@@ -154,6 +204,7 @@ export function AppProvider({ children }) {
           photoURL: person.photoURL,
         },
       ]);
+
       pushToast("User blocked");
     },
     [user.id, pushToast],
@@ -162,7 +213,11 @@ export function AppProvider({ children }) {
   const unblockUserById = useCallback(
     async (personId) => {
       await fs.unblockUser(personId);
-      setBlocked((b) => b.filter((u) => u.id !== personId));
+
+      setBlocked((b) =>
+        b.filter((u) => u.id !== personId),
+      );
+
       pushToast("User unblocked");
     },
     [pushToast],
@@ -170,8 +225,15 @@ export function AppProvider({ children }) {
 
   const updateWeatherSharing = useCallback(
     async (enabled) => {
-      await fs.updateWeatherSharing(user.id, { weatherSharing: enabled });
-      setUser((u) => ({ ...u, weatherSharing: enabled }));
+      await fs.updateWeatherSharing(user.id, {
+        weatherSharing: enabled,
+      });
+
+      setUser((u) => ({
+        ...u,
+        weatherSharing: enabled,
+      }));
+
       pushToast("Weather sharing updated");
     },
     [user.id, pushToast],
@@ -180,7 +242,12 @@ export function AppProvider({ children }) {
   const updateLocationSharing = useCallback(
     async (mode) => {
       await fs.updateLocationSharing(user.id, mode);
-      setUser((u) => ({ ...u, locationSharing: mode }));
+
+      setUser((u) => ({
+        ...u,
+        locationSharing: mode,
+      }));
+
       pushToast("Location sharing updated");
     },
     [user.id, pushToast],
@@ -189,10 +256,21 @@ export function AppProvider({ children }) {
   const searchUsers = useCallback(
     (term) => {
       const t = term.trim().toLowerCase();
+
       if (!t) return [];
-      const friendIds = new Set(friendsList.map((f) => f.id));
-      const blockedIds = new Set(blocked.map((b) => b.id));
-      const pendingIds = new Set(sent.map((s) => s.receiverId));
+
+      const friendIds = new Set(
+        friendsList.map((f) => f.id)
+      );
+
+      const blockedIds = new Set(
+        blocked.map((b) => b.id)
+      );
+
+      const pendingIds = new Set(
+        sent.map((s) => s.receiverId)
+      );
+
       return searchResultsPool
         .filter(
           (p) =>
@@ -240,11 +318,19 @@ export function AppProvider({ children }) {
     searchUsers,
   };
 
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+  return (
+    <AppContext.Provider value={value}>
+      {children}
+    </AppContext.Provider>
+  );
 }
 
 export function useApp() {
   const ctx = useContext(AppContext);
-  if (!ctx) throw new Error("useApp must be used within AppProvider");
+
+  if (!ctx) {
+    throw new Error("useApp must be used within AppProvider");
+  }
+
   return ctx;
 }
