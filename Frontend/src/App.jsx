@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppProvider } from "./context/AppContext";
 import Sidebar from "./components/Sidebar";
@@ -20,8 +20,10 @@ function AppShell() {
   return (
     <div className="min-h-screen bg-sky-wash flex">
       <Sidebar />
+
       <div className="flex-1 min-w-0">
         <Navbar />
+
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/friends" element={<Friends />} />
@@ -34,6 +36,7 @@ function AppShell() {
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </div>
+
       <BottomNav />
       <ToastStack />
     </div>
@@ -42,6 +45,24 @@ function AppShell() {
 
 export default function App() {
   const [authed, setAuthed] = useState(true);
+
+  console.log("APP IS RUNNING");
+
+  useEffect(() => {
+    console.log("STARTING WEATHER REQUEST");
+
+    fetch("http://localhost:5000/api/weather?city=Kolkata")
+      .then((response) => {
+        console.log("BACKEND RESPONSE STATUS:", response.status);
+        return response.json();
+      })
+      .then((data) => {
+        console.log("WEATHER DATA:", data);
+      })
+      .catch((error) => {
+        console.error("WEATHER ERROR:", error);
+      });
+  }, []);
 
   if (!authed) {
     return <Login onAuth={() => setAuthed(true)} />;
