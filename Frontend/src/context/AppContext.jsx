@@ -52,16 +52,28 @@ export function AppProvider({ children }) {
     setLocating(true);
 
     try {
+      // Get the user's real GPS coordinates
       const { latitude, longitude } = await getCurrentPosition();
 
+      // Save the coordinates to Firebase
       await fs.updateUserLocation(user.id, latitude, longitude);
 
+      // Get real weather + location name
       const weather = await getCurrentWeather(latitude, longitude);
 
+      // Update the user information
       setUser((u) => ({
         ...u,
         latitude,
         longitude,
+
+        // Replace the dummy location with the actual city
+        location: weather.locationName
+          ? `${weather.locationName}${
+              weather.country ? `, ${weather.country}` : ""
+            }`
+          : u.location,
+
         weather,
       }));
 
@@ -74,7 +86,7 @@ export function AppProvider({ children }) {
     }
   }, [user.id, pushToast]);
 
-  // Automatically get the user's location and real weather
+  // Automatically get the user's real location and weather
   // when the app starts.
   useEffect(() => {
     detectLocation();
@@ -260,15 +272,15 @@ export function AppProvider({ children }) {
       if (!t) return [];
 
       const friendIds = new Set(
-        friendsList.map((f) => f.id)
+        friendsList.map((f) => f.id),
       );
 
       const blockedIds = new Set(
-        blocked.map((b) => b.id)
+        blocked.map((b) => b.id),
       );
 
       const pendingIds = new Set(
-        sent.map((s) => s.receiverId)
+        sent.map((s) => s.receiverId),
       );
 
       return searchResultsPool
@@ -302,19 +314,25 @@ export function AppProvider({ children }) {
     locating,
     alerts: weatherAlerts,
     darkMode,
+
     toggleDarkMode,
     pushToast,
     dismissToast,
+
     detectLocation,
+
     sendRequest,
     cancelRequest,
     acceptRequest,
     rejectRequest,
     removeFriend,
+
     blockUserById,
     unblockUserById,
+
     updateWeatherSharing,
     updateLocationSharing,
+
     searchUsers,
   };
 

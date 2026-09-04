@@ -12,6 +12,7 @@ export async function getCurrentWeather(latitude, longitude) {
   const data = await response.json();
 
   return {
+    // Weather information
     icon: mapWeatherIcon(data.weather[0].main),
     condition: data.weather[0].description,
     temp: Math.round(data.main.temp),
@@ -19,6 +20,10 @@ export async function getCurrentWeather(latitude, longitude) {
     humidity: data.main.humidity,
     wind: Math.round(data.wind.speed * 3.6),
     rain: data.rain?.["1h"] || 0,
+
+    // Actual location information
+    locationName: data.name,
+    country: data.sys?.country || "",
   };
 }
 
