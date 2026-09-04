@@ -27,7 +27,7 @@ export default function Navbar() {
       transition-transform duration-200
       hover:scale-110
     "
-    alt="WeatherCircle logo"
+    alt="WeatherHub logo"
   />
 </span>
         <div>
