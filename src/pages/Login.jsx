@@ -5,10 +5,21 @@ export default function Login({ onAuth }) {
   const [mode, setMode] = useState("login"); // "login" | "register"
   const [form, setForm] = useState({ name: "", email: "", password: "" });
 
-  function submit(e) {
-    e.preventDefault();
+  async function submit(e) {
+  e.preventDefault();
+
+  try {
+    const response = await fetch("http://localhost:5000/api/test");
+
+    const data = await response.json();
+
+ console.log("BACKEND MESSAGE:", data.message);
+
     onAuth();
+  } catch (error) {
+    console.error("Backend error:", error);
   }
+}
 
   return (
     <div className="min-h-screen bg-sky-wash flex items-center justify-center px-5 py-10">
@@ -79,3 +90,6 @@ function Field({ icon: Icon, type = "text", placeholder, value, onChange }) {
     </div>
   );
 }
+
+
+
