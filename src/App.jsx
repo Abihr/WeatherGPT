@@ -41,7 +41,7 @@ function AppShell() {
 }
 
 export default function App() {
-  const [authed, setAuthed] = useState(true);
+  const [authed, setAuthed] = useState(false);
 
   if (!authed) {
     return <Login onAuth={() => setAuthed(true)} />;
