@@ -1,5 +1,5 @@
 {
-  "name": "MeghDyut",
+  "name": "WeatherHub",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -13,7 +13,7 @@
     "axios": "^1.20.0",
     "firebase": "^12.18.0",
     "leaflet": "^1.9.4",
-    "lucide-react": "^1.40.0",
+    "lucide-react": "^1.41.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-leaflet": "^5.0.0",

@@ -66,7 +66,7 @@ export default function Settings() {
       <div className="rounded-xl2 bg-sky-50 p-4 flex items-start gap-2.5 text-sky-700">
         <Info size={15} className="shrink-0 mt-0.5" />
         <p className="text-xs">
-          WeatherCircle demo build — connect Firebase and a weather provider in <code className="font-mono">src/firebase</code> and{" "}
+          WeatherHub demo build — connect Firebase and a weather provider in <code className="font-mono">src/firebase</code> and{" "}
           <code className="font-mono">src/services</code> to go live.
         </p>
       </div>

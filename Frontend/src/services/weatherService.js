@@ -6,34 +6,42 @@ export async function getCurrentWeather(latitude, longitude) {
   );
 
   if (!response.ok) {
-    throw new Error("Failed to fetch weather");
+    const errorData = await response.json().catch(() => ({}));
+
+    throw new Error(
+      errorData.error || "Failed to fetch weather"
+    );
   }
 
   const data = await response.json();
 
   return {
     // Weather information
-    icon: mapWeatherIcon(data.weather[0].main),
-    condition: data.weather[0].description,
-    temp: Math.round(data.main.temp),
-    feelsLike: Math.round(data.main.feels_like),
-    humidity: data.main.humidity,
-    wind: Math.round(data.wind.speed * 3.6),
+    icon: mapWeatherIcon(data.weather?.[0]?.main),
+    condition: data.weather?.[0]?.description || "Unknown",
+    temp: Math.round(data.main?.temp ?? 0),
+    feelsLike: Math.round(data.main?.feels_like ?? 0),
+    humidity: data.main?.humidity ?? 0,
+
+    // OpenWeather wind speed is m/s → km/h
+    wind: Math.round((data.wind?.speed ?? 0) * 3.6),
+
+    // Rain in last 1 hour
     rain: data.rain?.["1h"] || 0,
 
-    // Actual location information
-    locationName: data.name,
+    // Location
+    locationName: data.name || "Unknown location",
     country: data.sys?.country || "",
   };
 }
 
 function mapWeatherIcon(condition) {
-  const value = condition.toLowerCase();
+  const value = condition?.toLowerCase() || "";
 
   if (value.includes("clear")) return "sunny";
   if (value.includes("cloud")) return "partly-cloudy";
   if (value.includes("rain")) return "rain";
-  if (value.includes("storm")) return "rain";
+  if (value.includes("storm") || value.includes("thunder")) return "rain";
 
   return "cloudy";
 }

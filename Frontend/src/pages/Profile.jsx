@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -10,28 +9,85 @@ import {
   Sun,
 } from "lucide-react";
 
+import { signOut } from "firebase/auth";
+import { auth } from "../firebase/firebase";
 import { useApp } from "../context/AppContext";
 
 import WeatherSharing from "../components/WeatherSharing";
 import LocationSharing from "../components/LocationSharing";
 
 export default function Profile() {
-  const {
-    user,
-    friendsList,
-    blocked,
-    pushToast,
-    darkMode,
-    toggleDarkMode,
-  } = useApp();
+  const { user, friendsList, blocked, pushToast, darkMode, toggleDarkMode } =
+    useApp();
 
   const navigate = useNavigate();
 
-  const initials = user.name
-    .split(" ")
+  // ========================================
+  // Firebase Sign Out
+  // ========================================
+  async function handleSignOut() {
+    try {
+      await signOut(auth);
+
+      console.log("Signed out successfully");
+
+      // App.jsx will detect user === null
+      // and automatically show Login.jsx
+    } catch (error) {
+      console.error("Sign out error:", error);
+
+      pushToast("Failed to sign out. Please try again.", "error");
+    }
+  }
+
+  // ========================================
+  // User Initials
+  // ========================================
+  const initials = (user?.name || "User")
+    .trim()
+    .split(/\s+/)
     .map((n) => n[0])
     .slice(0, 2)
-    .join("");
+    .join("")
+    .toUpperCase();
+
+  // ========================================
+  // Safe Location Text
+  // ========================================
+  //
+  // Firebase location:
+  //
+  // location: {
+  //   city: "Kolkata",
+  //   lat: 22.57,
+  //   lng: 88.36
+  // }
+  //
+  // Never render user.location directly because
+  // it is an object.
+  //
+  const locationText = (() => {
+    if (typeof user?.location === "string") {
+      return user.location;
+    }
+
+    if (typeof user?.location?.city === "string") {
+      return user.location.city;
+    }
+
+    if (typeof user?.locationText === "string") {
+      return user.locationText;
+    }
+
+    if (
+      typeof user?.location?.lat === "number" &&
+      typeof user?.location?.lng === "number"
+    ) {
+      return `${user.location.lat.toFixed(4)}, ${user.location.lng.toFixed(4)}`;
+    }
+
+    return "Location not available";
+  })();
 
   return (
     <div
@@ -40,8 +96,10 @@ export default function Profile() {
       }`}
     >
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 pb-28 md:pb-10 flex flex-col gap-5">
+        {/* ========================================
+            Header + Dark Mode Button
+        ======================================== */}
 
-        {/* Header + Dark Mode Button */}
         <div className="flex items-center justify-between">
           <h1
             className={`text-2xl font-display font-extrabold ${
@@ -64,32 +122,41 @@ export default function Profile() {
           </button>
         </div>
 
-        {/* Profile Card */}
-        <div className="rounded-xl3 bg-hero-gradient text-white p-6 flex items-center gap-4 shadow-pop">
+        {/* ========================================
+            Profile Card
+        ======================================== */}
+
+        <div className="rounded-xl3 bg-hero-gradient text-white p-5 flex items-center gap-4 shadow-pop">
+          {/* Avatar */}
+
           <div className="h-16 w-16 rounded-full bg-white/20 backdrop-blur-sm font-display font-bold text-xl flex items-center justify-center shrink-0">
             {initials}
           </div>
 
-          <div>
-            <h1 className="text-xl font-display font-extrabold">
-              {user.name}
+          {/* User Information */}
+
+          <div className="min-w-0">
+            <h1 className="text-2xl font-display font-extrabold truncate">
+              {user?.name || "User"}
             </h1>
 
-            <p className="text-sky-100 text-sm">
-              @{user.username}
-            </p>
+            {/* Safe location display */}
 
-            <p className="text-sky-100 text-xs flex items-center gap-1 mt-1">
+            <p className="text-sky-100 text-2xs flex items-center gap-1 mt-1">
               <MapPin size={11} />
-              {user.location}
+
+              {locationText}
             </p>
           </div>
         </div>
 
-        {/* Friends / Blocked */}
-        <div className="grid grid-cols-2 gap-3">
+        {/* ========================================
+            Friends / Blocked
+        ======================================== */}
 
+        <div className="grid grid-cols-2 gap-3">
           {/* Friends */}
+
           <div
             className={`rounded-xl2 shadow-card p-4 text-center transition-colors ${
               darkMode ? "bg-slate-900" : "bg-white"
@@ -100,7 +167,7 @@ export default function Profile() {
                 darkMode ? "text-white" : "text-ink-900"
               }`}
             >
-              {friendsList.length}
+              {friendsList?.length || 0}
             </p>
 
             <p
@@ -113,6 +180,7 @@ export default function Profile() {
           </div>
 
           {/* Blocked */}
+
           <button
             onClick={() => navigate("/blocked")}
             className={`rounded-xl2 shadow-card p-4 text-center transition-colors ${
@@ -126,7 +194,7 @@ export default function Profile() {
                 darkMode ? "text-white" : "text-ink-900"
               }`}
             >
-              {blocked.length}
+              {blocked?.length || 0}
             </p>
 
             <p
@@ -139,13 +207,22 @@ export default function Profile() {
           </button>
         </div>
 
-        {/* Weather Sharing */}
+        {/* ========================================
+            Weather Sharing
+        ======================================== */}
+
         <WeatherSharing />
 
-        {/* Location Sharing */}
+        {/* ========================================
+            Location Sharing
+        ======================================== */}
+
         <LocationSharing />
 
-        {/* Blocked Users */}
+        {/* ========================================
+            Blocked Users
+        ======================================== */}
+
         <button
           onClick={() => navigate("/blocked")}
           className={`rounded-xl2 shadow-card p-4 flex items-center gap-3 transition-colors ${
@@ -178,9 +255,12 @@ export default function Profile() {
           />
         </button>
 
-        {/* Sign Out */}
+        {/* ========================================
+            Sign Out
+        ======================================== */}
+
         <button
-          onClick={() => pushToast("Signed out (demo only)")}
+          onClick={handleSignOut}
           className={`rounded-xl2 shadow-card p-4 flex items-center gap-3 transition-colors ${
             darkMode
               ? "bg-slate-900 hover:bg-red-950"
@@ -195,9 +275,7 @@ export default function Profile() {
             Sign Out
           </span>
         </button>
-
       </div>
     </div>
   );
 }
-
