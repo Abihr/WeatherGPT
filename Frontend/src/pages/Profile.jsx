@@ -11,54 +11,83 @@ import {
 
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase/firebase";
-
 import { useApp } from "../context/AppContext";
 
 import WeatherSharing from "../components/WeatherSharing";
 import LocationSharing from "../components/LocationSharing";
 
 export default function Profile() {
-  const {
-    user,
-    friendsList,
-    blocked,
-    pushToast,
-    darkMode,
-    toggleDarkMode,
-  } = useApp();
+  const { user, friendsList, blocked, pushToast, darkMode, toggleDarkMode } =
+    useApp();
 
   const navigate = useNavigate();
 
   // ========================================
   // Firebase Sign Out
   // ========================================
-
   async function handleSignOut() {
     try {
       await signOut(auth);
 
       console.log("Signed out successfully");
 
-      // No navigate() needed.
       // App.jsx will detect user === null
-      // and automatically show Login.jsx.
+      // and automatically show Login.jsx
     } catch (error) {
       console.error("Sign out error:", error);
 
-      pushToast("Failed to sign out. Please try again.");
+      pushToast("Failed to sign out. Please try again.", "error");
     }
   }
 
   // ========================================
   // User Initials
   // ========================================
-
   const initials = (user?.name || "User")
-    .split(" ")
+    .trim()
+    .split(/\s+/)
     .map((n) => n[0])
     .slice(0, 2)
     .join("")
     .toUpperCase();
+
+  // ========================================
+  // Safe Location Text
+  // ========================================
+  //
+  // Firebase location:
+  //
+  // location: {
+  //   city: "Kolkata",
+  //   lat: 22.57,
+  //   lng: 88.36
+  // }
+  //
+  // Never render user.location directly because
+  // it is an object.
+  //
+  const locationText = (() => {
+    if (typeof user?.location === "string") {
+      return user.location;
+    }
+
+    if (typeof user?.location?.city === "string") {
+      return user.location.city;
+    }
+
+    if (typeof user?.locationText === "string") {
+      return user.locationText;
+    }
+
+    if (
+      typeof user?.location?.lat === "number" &&
+      typeof user?.location?.lng === "number"
+    ) {
+      return `${user.location.lat.toFixed(4)}, ${user.location.lng.toFixed(4)}`;
+    }
+
+    return "Location not available";
+  })();
 
   return (
     <div
@@ -67,13 +96,11 @@ export default function Profile() {
       }`}
     >
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 pb-28 md:pb-10 flex flex-col gap-5">
-
         {/* ========================================
             Header + Dark Mode Button
         ======================================== */}
 
         <div className="flex items-center justify-between">
-
           <h1
             className={`text-2xl font-display font-extrabold ${
               darkMode ? "text-white" : "text-ink-900"
@@ -91,13 +118,8 @@ export default function Profile() {
             }`}
             aria-label="Toggle dark mode"
           >
-            {darkMode ? (
-              <Sun size={18} />
-            ) : (
-              <Moon size={18} />
-            )}
+            {darkMode ? <Sun size={18} /> : <Moon size={18} />}
           </button>
-
         </div>
 
         {/* ========================================
@@ -105,26 +127,27 @@ export default function Profile() {
         ======================================== */}
 
         <div className="rounded-xl3 bg-hero-gradient text-white p-5 flex items-center gap-4 shadow-pop">
+          {/* Avatar */}
 
           <div className="h-16 w-16 rounded-full bg-white/20 backdrop-blur-sm font-display font-bold text-xl flex items-center justify-center shrink-0">
             {initials}
           </div>
 
-          <div>
+          {/* User Information */}
 
-            <h1 className="text-2xl font-display font-extrabold">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-display font-extrabold truncate">
               {user?.name || "User"}
             </h1>
 
-            
+            {/* Safe location display */}
 
             <p className="text-sky-100 text-2xs flex items-center gap-1 mt-1">
               <MapPin size={11} />
-              {user?.location || "Location not available"}
+
+              {locationText}
             </p>
-
           </div>
-
         </div>
 
         {/* ========================================
@@ -132,31 +155,24 @@ export default function Profile() {
         ======================================== */}
 
         <div className="grid grid-cols-2 gap-3">
-
           {/* Friends */}
 
           <div
             className={`rounded-xl2 shadow-card p-4 text-center transition-colors ${
-              darkMode
-                ? "bg-slate-900"
-                : "bg-white"
+              darkMode ? "bg-slate-900" : "bg-white"
             }`}
           >
             <p
               className={`text-2xl font-display font-bold ${
-                darkMode
-                  ? "text-white"
-                  : "text-ink-900"
+                darkMode ? "text-white" : "text-ink-900"
               }`}
             >
-              {friendsList.length}
+              {friendsList?.length || 0}
             </p>
 
             <p
               className={`text-xs ${
-                darkMode
-                  ? "text-slate-400"
-                  : "text-ink-400"
+                darkMode ? "text-slate-400" : "text-ink-400"
               }`}
             >
               Friends
@@ -175,25 +191,20 @@ export default function Profile() {
           >
             <p
               className={`text-2xl font-display font-bold ${
-                darkMode
-                  ? "text-white"
-                  : "text-ink-900"
+                darkMode ? "text-white" : "text-ink-900"
               }`}
             >
-              {blocked.length}
+              {blocked?.length || 0}
             </p>
 
             <p
               className={`text-xs ${
-                darkMode
-                  ? "text-slate-400"
-                  : "text-ink-400"
+                darkMode ? "text-slate-400" : "text-ink-400"
               }`}
             >
               Blocked
             </p>
           </button>
-
         </div>
 
         {/* ========================================
@@ -220,7 +231,6 @@ export default function Profile() {
               : "bg-white hover:bg-sky-50"
           }`}
         >
-
           <span
             className={`h-9 w-9 rounded-full flex items-center justify-center ${
               darkMode
@@ -233,9 +243,7 @@ export default function Profile() {
 
           <span
             className={`flex-1 text-left text-sm font-medium ${
-              darkMode
-                ? "text-slate-200"
-                : "text-ink-700"
+              darkMode ? "text-slate-200" : "text-ink-700"
             }`}
           >
             Blocked Users
@@ -243,13 +251,8 @@ export default function Profile() {
 
           <ChevronRight
             size={16}
-            className={
-              darkMode
-                ? "text-slate-500"
-                : "text-ink-400"
-            }
+            className={darkMode ? "text-slate-500" : "text-ink-400"}
           />
-
         </button>
 
         {/* ========================================
@@ -264,7 +267,6 @@ export default function Profile() {
               : "bg-white hover:bg-red-50"
           }`}
         >
-
           <span className="h-9 w-9 rounded-full bg-red-50 text-red-500 flex items-center justify-center">
             <LogOut size={16} />
           </span>
@@ -272,9 +274,7 @@ export default function Profile() {
           <span className="flex-1 text-left text-sm font-medium text-red-500">
             Sign Out
           </span>
-
         </button>
-
       </div>
     </div>
   );

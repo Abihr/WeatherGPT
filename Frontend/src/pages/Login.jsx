@@ -17,7 +17,9 @@ import {
   updateProfile,
 } from "firebase/auth";
 
-import { auth } from "../firebase/firebase";
+import { doc, setDoc } from "firebase/firestore";
+
+import { auth, db } from "../firebase/firebase";
 
 export default function Login() {
   const [mode, setMode] = useState("login");
@@ -37,6 +39,7 @@ export default function Login() {
   // =========================
   // HANDLE INPUT CHANGE
   // =========================
+
   function handleChange(e) {
     setForm({
       ...form,
@@ -47,6 +50,7 @@ export default function Login() {
   // =========================
   // SUBMIT
   // =========================
+
   async function submit(e) {
     e.preventDefault();
 
@@ -57,6 +61,7 @@ export default function Login() {
       // =========================
       // SIGN UP
       // =========================
+
       if (mode === "register") {
         if (!form.name.trim()) {
           setError("Please enter your full name.");
@@ -73,6 +78,10 @@ export default function Login() {
           return;
         }
 
+        // =========================
+        // CREATE FIREBASE AUTH USER
+        // =========================
+
         const userCredential =
           await createUserWithEmailAndPassword(
             auth,
@@ -80,14 +89,78 @@ export default function Login() {
             form.password
           );
 
-        // Save user's name in Firebase Authentication
-        await updateProfile(userCredential.user, {
+        const user = userCredential.user;
+
+        // =========================
+        // SAVE NAME TO FIREBASE AUTH
+        // =========================
+
+        await updateProfile(user, {
           displayName: form.name.trim(),
         });
 
+        // =========================
+        // CREATE FIRESTORE USER
+        // =========================
+
+        await setDoc(doc(db, "users", user.uid), {
+          name: form.name.trim(),
+
+          // Simple username generated from name
+          username: form.name
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, ""),
+
+          email: form.email.trim(),
+
+          photoURL: user.photoURL || "",
+
+          // =========================
+          // LOCATION
+          // =========================
+
+          latitude: null,
+          longitude: null,
+
+          location: {
+            city: "",
+            lat: null,
+            lng: null,
+          },
+
+          // =========================
+          // WEATHER
+          // =========================
+
+          weather: {
+            temperature: null,
+            condition: "",
+            feelsLike: null,
+            humidity: null,
+            wind: null,
+            rain: 0,
+            icon: "",
+            locationName: "",
+            country: "",
+          },
+
+          // =========================
+          // PRIVACY SETTINGS
+          // =========================
+
+          locationSharing: "friends",
+          weatherSharing: true,
+        });
+
         console.log(
-          "Account created successfully:",
-          userCredential.user
+          "✅ Account created successfully:",
+          user.uid
+        );
+
+        console.log(
+          "✅ Firestore user document created:",
+          user.uid
         );
 
         // Firebase automatically signs the user in
@@ -97,6 +170,7 @@ export default function Login() {
       // =========================
       // LOGIN
       // =========================
+
       if (!form.email.trim()) {
         setError("Please enter your email.");
         return;
@@ -181,8 +255,8 @@ export default function Login() {
         {/* =========================
             LOGO
         ========================= */}
-        <div className="flex flex-col items-center mb-8">
 
+        <div className="flex flex-col items-center mb-8">
           <span
             className="
               w-24 h-24
@@ -222,13 +296,14 @@ export default function Login() {
         {/* =========================
             CARD
         ========================= */}
+
         <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-6 sm:p-8">
 
           {/* =========================
               LOGIN / REGISTER TABS
           ========================= */}
-          <div className="flex bg-slate-100 rounded-xl p-1 mb-6">
 
+          <div className="flex bg-slate-100 rounded-xl p-1 mb-6">
             <button
               type="button"
               onClick={() => {
@@ -258,14 +333,13 @@ export default function Login() {
             >
               Sign Up
             </button>
-
           </div>
 
           {/* =========================
               HEADING
           ========================= */}
-          <div className="mb-6">
 
+          <div className="mb-6">
             <h2 className="text-2xl font-bold text-slate-800">
               {mode === "register"
                 ? "Create your account"
@@ -277,12 +351,12 @@ export default function Login() {
                 ? "Join WeatherCircle and connect with people nearby."
                 : "Sign in to continue to WeatherCircle."}
             </p>
-
           </div>
 
           {/* =========================
               FORM
           ========================= */}
+
           <form
             onSubmit={submit}
             className="space-y-4"
@@ -291,6 +365,7 @@ export default function Login() {
             {/* =========================
                 NAME
             ========================= */}
+
             {mode === "register" && (
               <Field
                 icon={<UserIcon size={19} />}
@@ -305,6 +380,7 @@ export default function Login() {
             {/* =========================
                 EMAIL
             ========================= */}
+
             <Field
               icon={<Mail size={19} />}
               name="email"
@@ -317,17 +393,24 @@ export default function Login() {
             {/* =========================
                 PASSWORD
             ========================= */}
+
             <div className="relative">
 
               {/* Lock Icon */}
+
               <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                 <Lock size={19} />
               </div>
 
               {/* Password Input */}
+
               <input
                 name="password"
-                type={showPassword ? "text" : "password"}
+                type={
+                  showPassword
+                    ? "text"
+                    : "password"
+                }
                 placeholder="Password"
                 value={form.password}
                 onChange={handleChange}
@@ -351,10 +434,13 @@ export default function Login() {
               />
 
               {/* Eye Button */}
+
               <button
                 type="button"
                 onClick={() =>
-                  setShowPassword((prev) => !prev)
+                  setShowPassword(
+                    (prev) => !prev
+                  )
                 }
                 className="
                   absolute
@@ -380,12 +466,12 @@ export default function Login() {
                   <Eye size={20} />
                 )}
               </button>
-
             </div>
 
             {/* =========================
                 ERROR
             ========================= */}
+
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3">
                 {error}
@@ -395,6 +481,7 @@ export default function Login() {
             {/* =========================
                 SUBMIT BUTTON
             ========================= */}
+
             <button
               type="submit"
               disabled={loading}
@@ -420,15 +507,14 @@ export default function Login() {
                 ? "Create Account"
                 : "Sign In"}
             </button>
-
           </form>
 
           {/* =========================
               REGISTER INFORMATION
           ========================= */}
+
           {mode === "register" && (
             <div className="flex gap-3 mt-6 bg-sky-50 border border-sky-100 rounded-xl p-4">
-
               <MapPin
                 size={20}
                 className="text-sky-500 shrink-0 mt-0.5"
@@ -438,19 +524,17 @@ export default function Login() {
                 WeatherCircle can use your location to show
                 weather conditions and nearby community reports.
               </p>
-
             </div>
           )}
-
         </div>
 
         {/* =========================
             FOOTER
         ========================= */}
+
         <p className="text-center text-xs text-slate-400 mt-6">
           © 2026 WeatherCircle
         </p>
-
       </div>
     </div>
   );
@@ -472,11 +556,13 @@ function Field({
     <div className="relative">
 
       {/* Icon */}
+
       <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
         {icon}
       </div>
 
       {/* Input */}
+
       <input
         name={name}
         type={type}
@@ -501,7 +587,6 @@ function Field({
           focus:ring-sky-100
         "
       />
-
     </div>
   );
 }

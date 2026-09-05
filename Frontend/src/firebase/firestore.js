@@ -39,46 +39,36 @@ export async function getUser(userId) {
    ========================================================= */
 
 export async function searchUsers(queryText) {
-  const text = queryText.trim().toLowerCase();
+  const text = queryText?.trim().toLowerCase();
 
-  if (!text) return [];
+  if (!text) {
+    return [];
+  }
 
   const usersRef = collection(db, "users");
-
   const snapshot = await getDocs(usersRef);
 
-  return snapshot.docs
-    .map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }))
-    .filter((user) => {
-      const name = user.name?.toLowerCase() || "";
-      const username = user.username?.toLowerCase() || "";
+  const users = snapshot.docs.map((docSnap) => ({
+    id: docSnap.id,
+    ...docSnap.data(),
+  }));
 
-      return (
-        name.includes(text) ||
-        username.includes(text)
-      );
-    });
+  return users.filter((user) => {
+    const name = String(user.name || "").toLowerCase();
+    const username = String(user.username || "").toLowerCase();
+    const email = String(user.email || "").toLowerCase();
+
+    return (
+      name.includes(text) ||
+      username.includes(text) ||
+      email.includes(text)
+    );
+  });
 }
 
 /* =========================================================
    FRIEND REQUESTS
    ========================================================= */
-
-/*
-  Create:
-
-  friendRequests/{requestId}
-
-  {
-    senderId,
-    receiverId,
-    status: "pending",
-    createdAt
-  }
-*/
 
 export async function sendFriendRequest(
   senderId,
@@ -89,15 +79,17 @@ export async function sendFriendRequest(
   }
 
   if (senderId === receiverId) {
-    throw new Error("You cannot send a friend request to yourself");
+    throw new Error(
+      "You cannot send a friend request to yourself"
+    );
   }
 
-  /* Check existing pending request */
   const requestsRef = collection(
     db,
     "friendRequests"
   );
 
+  // Check existing pending request
   const existingQuery = query(
     requestsRef,
     where("senderId", "==", senderId),
@@ -113,7 +105,7 @@ export async function sendFriendRequest(
     throw new Error("Friend request already sent");
   }
 
-// Send friend request
+  // Create request
   const requestRef = await addDoc(
     requestsRef,
     {
@@ -135,6 +127,8 @@ export async function sendFriendRequest(
    ========================================================= */
 
 export async function getReceivedRequests(userId) {
+  if (!userId) return [];
+
   const requestsRef = collection(
     db,
     "friendRequests"
@@ -159,6 +153,8 @@ export async function getReceivedRequests(userId) {
    ========================================================= */
 
 export async function getSentRequests(userId) {
+  if (!userId) return [];
+
   const requestsRef = collection(
     db,
     "friendRequests"
@@ -191,7 +187,13 @@ export async function acceptFriendRequest(
     throw new Error("Invalid friend request data");
   }
 
-  // Update request
+  if (user1 === user2) {
+    throw new Error(
+      "A user cannot be friends with themselves"
+    );
+  }
+
+  // Update request status
   const requestRef = doc(
     db,
     "friendRequests",
@@ -270,7 +272,7 @@ export async function cancelFriendRequest(
 }
 
 /* =========================================================
-   GET FRIENDSHIPS
+   GET FRIENDS
    ========================================================= */
 
 export async function getFriends(userId) {
@@ -291,10 +293,14 @@ export async function getFriends(userId) {
 
       const friend = await getUser(friendId);
 
+      if (!friend) {
+        return null;
+      }
+
       return {
+        ...friend,
         friendshipId: friendDoc.id,
         friendId,
-        ...friend,
       };
     })
   );
@@ -306,19 +312,36 @@ export async function getFriends(userId) {
    REMOVE FRIEND
    ========================================================= */
 
-export async function removeFriend(userId, friendId) {
+export async function removeFriend(
+  userId,
+  friendId
+) {
   if (!userId || !friendId) {
-    throw new Error("User ID and Friend ID are required");
+    throw new Error(
+      "User ID and Friend ID are required"
+    );
   }
 
   // Remove friend from current user's list
   await deleteDoc(
-    doc(db, "users", userId, "friends", friendId)
+    doc(
+      db,
+      "users",
+      userId,
+      "friends",
+      friendId
+    )
   );
 
   // Remove current user from friend's list
   await deleteDoc(
-    doc(db, "users", friendId, "friends", userId)
+    doc(
+      db,
+      "users",
+      friendId,
+      "friends",
+      userId
+    )
   );
 
   return true;
@@ -334,6 +357,12 @@ export async function blockUser(
 ) {
   if (!blockerId || !blockedUserId) {
     throw new Error("Invalid block data");
+  }
+
+  if (blockerId === blockedUserId) {
+    throw new Error(
+      "You cannot block yourself"
+    );
   }
 
   const blockedRef = collection(
@@ -359,9 +388,7 @@ export async function blockUser(
    UNBLOCK USER
    ========================================================= */
 
-export async function unblockUser(
-  blockId
-) {
+export async function unblockUser(blockId) {
   if (!blockId) {
     throw new Error("Block ID is required");
   }
@@ -389,7 +416,11 @@ export async function updateWeatherSharing(
     throw new Error("User ID is required");
   }
 
-  const userRef = doc(db, "users", userId);
+  const userRef = doc(
+    db,
+    "users",
+    userId
+  );
 
   await updateDoc(userRef, settings);
 
@@ -408,7 +439,11 @@ export async function updateLocationSharing(
     throw new Error("User ID is required");
   }
 
-  const userRef = doc(db, "users", userId);
+  const userRef = doc(
+    db,
+    "users",
+    userId
+  );
 
   await updateDoc(userRef, {
     locationSharing: mode,
@@ -430,11 +465,79 @@ export async function updateUserLocation(
     throw new Error("User ID is required");
   }
 
-  const userRef = doc(db, "users", userId);
+  const userRef = doc(
+    db,
+    "users",
+    userId
+  );
 
   await updateDoc(userRef, {
     latitude,
     longitude,
+
+    // Keep location coordinates together too
+    location: {
+      lat: latitude,
+      lng: longitude,
+    },
+  });
+
+  return true;
+}
+
+/* =========================================================
+   UPDATE USER WEATHER
+   ========================================================= */
+
+export async function updateUserWeather(
+  userId,
+  weather
+) {
+  if (!userId) {
+    throw new Error("User ID is required");
+  }
+
+  const userRef = doc(
+    db,
+    "users",
+    userId
+  );
+
+  await updateDoc(userRef, {
+    weather: {
+      // Supports both temperature and old temp format
+      temperature:
+        weather?.temperature ??
+        weather?.temp ??
+        null,
+
+      condition:
+        weather?.condition ?? "",
+
+      feelsLike:
+        weather?.feelsLike ?? null,
+
+      humidity:
+        weather?.humidity ?? null,
+
+      wind:
+        weather?.wind ?? null,
+
+      rain:
+        weather?.rain ?? 0,
+
+      icon:
+        weather?.icon ?? "",
+
+      locationName:
+        weather?.locationName ?? "",
+
+      country:
+        weather?.country ?? "",
+    },
+
+    weatherUpdatedAt:
+      serverTimestamp(),
   });
 
   return true;
