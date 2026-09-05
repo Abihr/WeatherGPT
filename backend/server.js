@@ -13,41 +13,50 @@ app.get("/api/weather", async (req, res) => {
     // Require either city OR both latitude and longitude
     if (!city && (!lat || !lon)) {
         return res.status(400).json({
-            error: "City or coordinates are required"
+            error: "City or coordinates are required",
         });
     }
 
     try {
         let url;
 
-        // If a city was provided
+        // City weather
         if (city) {
-            url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${process.env.WEATHER_API_KEY}&units=metric`;
+            url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(
+                city
+            )}&appid=${process.env.WEATHER_API_KEY}&units=metric`;
         }
 
-        // If coordinates were provided
+        // Location weather
         else {
             url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${process.env.WEATHER_API_KEY}&units=metric`;
         }
 
+        console.log("Requesting OpenWeather:", url.replace(
+            process.env.WEATHER_API_KEY,
+            "HIDDEN_KEY"
+        ));
+
         const response = await fetch(url);
         const data = await response.json();
 
-        // Handle errors returned by OpenWeather
+        console.log("OpenWeather response:", data);
+
+        // OpenWeather error
         if (!response.ok) {
             return res.status(response.status).json({
-                error: data.message || "Weather API request failed"
+                error: data.message || "Weather API request failed",
             });
         }
 
-        // Send weather data back to frontend
+        // Send weather data to frontend
         res.json(data);
 
     } catch (error) {
-        console.error(error);
+        console.error("Weather server error:", error);
 
         res.status(500).json({
-            error: "Failed to fetch weather"
+            error: "Failed to fetch weather",
         });
     }
 });

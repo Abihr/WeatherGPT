@@ -1,130 +1,434 @@
-// Firestore data-access layer.
-//
-// Each function documents the Firestore collections it would read/write,
-// matching the structure in the project spec:
-//
-//   users/{userId}            -> name, username, email, photoURL, latitude,
-//                                 longitude, locationSharing, weatherSharing
-//   friendRequests/{requestId}-> senderId, receiverId, status, createdAt
-//   friends/{friendshipId}    -> user1, user2, createdAt
-//   blockedUsers/{blockId}    -> blockerId, blockedUserId, createdAt
-//
-// USE_FIREBASE is false by default (see firebase.js), so these are stubs
-// that a real integration would replace with `getDocs`, `addDoc`,
-// `updateDoc`, `deleteDoc`, `onSnapshot`, etc. from the `firebase/firestore`
-// SDK. The UI in this project talks to `AppContext`, which uses these
-// functions as the seam where real persistence would plug in.
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  serverTimestamp,
+} from "firebase/firestore";
 
-import { db, USE_FIREBASE } from "./firebase";
-// import {
-//   collection, doc, getDocs, getDoc, addDoc, updateDoc, deleteDoc,
-//   query, where, serverTimestamp,
-// } from "firebase/firestore";
+import { db } from "./firebase";
+import { setDoc } from "firebase/firestore";
 
-/** Search users by name/username. Firestore has no native full-text search;
- *  a real implementation would use a prefix query on `username` or an
- *  external index (Algolia/Typesense). */
+/* =========================================================
+   USERS
+   ========================================================= */
+
+export async function getUser(userId) {
+  if (!userId) return null;
+
+  const userRef = doc(db, "users", userId);
+  const snapshot = await getDoc(userRef);
+
+  if (!snapshot.exists()) {
+    return null;
+  }
+
+  return {
+    id: snapshot.id,
+    ...snapshot.data(),
+  };
+}
+
+/* =========================================================
+   SEARCH USERS
+   ========================================================= */
+
 export async function searchUsers(queryText) {
-  if (!USE_FIREBASE) {
-    console.info("[firestore stub] searchUsers:", queryText);
-    return [];
-  }
-  // const q = query(collection(db, "users"), where("username", ">=", queryText));
-  // const snap = await getDocs(q);
-  // return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const text = queryText.trim().toLowerCase();
+
+  if (!text) return [];
+
+  const usersRef = collection(db, "users");
+
+  const snapshot = await getDocs(usersRef);
+
+  return snapshot.docs
+    .map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }))
+    .filter((user) => {
+      const name = user.name?.toLowerCase() || "";
+      const username = user.username?.toLowerCase() || "";
+
+      return (
+        name.includes(text) ||
+        username.includes(text)
+      );
+    });
 }
 
-/** Create a friendRequests/{requestId} doc with status "pending". */
-export async function sendFriendRequest(senderId, receiverId) {
-  if (!USE_FIREBASE) {
-    console.info("[firestore stub] sendFriendRequest:", senderId, "->", receiverId);
-    return { requestId: `mock_${Date.now()}`, status: "pending" };
+/* =========================================================
+   FRIEND REQUESTS
+   ========================================================= */
+
+/*
+  Create:
+
+  friendRequests/{requestId}
+
+  {
+    senderId,
+    receiverId,
+    status: "pending",
+    createdAt
   }
-  // return addDoc(collection(db, "friendRequests"), {
-  //   senderId, receiverId, status: "pending", createdAt: serverTimestamp(),
-  // });
+*/
+
+export async function sendFriendRequest(
+  senderId,
+  receiverId
+) {
+  if (!senderId || !receiverId) {
+    throw new Error("Sender and receiver are required");
+  }
+
+  if (senderId === receiverId) {
+    throw new Error("You cannot send a friend request to yourself");
+  }
+
+  /* Check existing pending request */
+  const requestsRef = collection(
+    db,
+    "friendRequests"
+  );
+
+  const existingQuery = query(
+    requestsRef,
+    where("senderId", "==", senderId),
+    where("receiverId", "==", receiverId),
+    where("status", "==", "pending")
+  );
+
+  const existingSnapshot = await getDocs(
+    existingQuery
+  );
+
+  if (!existingSnapshot.empty) {
+    throw new Error("Friend request already sent");
+  }
+
+  /* Create request */
+  const requestRef = await addDoc(
+    requestsRef,
+    {
+      senderId,
+      receiverId,
+      status: "pending",
+      createdAt: serverTimestamp(),
+    }
+  );
+
+  return {
+    requestId: requestRef.id,
+    status: "pending",
+  };
 }
 
-/** Update a friendRequests doc to "accepted" and create a friends doc. */
-export async function acceptFriendRequest(requestId, user1, user2) {
-  if (!USE_FIREBASE) {
-    console.info("[firestore stub] acceptFriendRequest:", requestId);
-    return { friendshipId: `mock_${Date.now()}` };
-  }
-  // await updateDoc(doc(db, "friendRequests", requestId), { status: "accepted" });
-  // return addDoc(collection(db, "friends"), { user1, user2, createdAt: serverTimestamp() });
+/* =========================================================
+   GET RECEIVED REQUESTS
+   ========================================================= */
+
+export async function getReceivedRequests(userId) {
+  const requestsRef = collection(
+    db,
+    "friendRequests"
+  );
+
+  const q = query(
+    requestsRef,
+    where("receiverId", "==", userId),
+    where("status", "==", "pending")
+  );
+
+  const snapshot = await getDocs(q);
+
+  return snapshot.docs.map((request) => ({
+    requestId: request.id,
+    ...request.data(),
+  }));
 }
 
-/** Update a friendRequests doc to "rejected". */
-export async function rejectFriendRequest(requestId) {
-  if (!USE_FIREBASE) {
-    console.info("[firestore stub] rejectFriendRequest:", requestId);
-    return true;
-  }
-  // return updateDoc(doc(db, "friendRequests", requestId), { status: "rejected" });
+/* =========================================================
+   GET SENT REQUESTS
+   ========================================================= */
+
+export async function getSentRequests(userId) {
+  const requestsRef = collection(
+    db,
+    "friendRequests"
+  );
+
+  const q = query(
+    requestsRef,
+    where("senderId", "==", userId),
+    where("status", "==", "pending")
+  );
+
+  const snapshot = await getDocs(q);
+
+  return snapshot.docs.map((request) => ({
+    requestId: request.id,
+    ...request.data(),
+  }));
 }
 
-/** Delete a pending friendRequests doc sent by the current user. */
-export async function cancelFriendRequest(requestId) {
-  if (!USE_FIREBASE) {
-    console.info("[firestore stub] cancelFriendRequest:", requestId);
-    return true;
+/* =========================================================
+   ACCEPT FRIEND REQUEST
+   ========================================================= */
+
+export async function acceptFriendRequest(
+  requestId,
+  user1,
+  user2
+) {
+  if (!requestId || !user1 || !user2) {
+    throw new Error("Invalid friend request data");
   }
-  // return deleteDoc(doc(db, "friendRequests", requestId));
+
+  /* Update request */
+  const requestRef = doc(
+    db,
+    "friendRequests",
+    requestId
+  );
+
+  await updateDoc(requestRef, {
+    status: "accepted",
+  });
+
+  /* Create friendship */
+  const friendsRef = collection(db, "friends");
+
+  const friendshipRef = await addDoc(
+    friendsRef,
+    {
+      user1,
+      user2,
+      createdAt: serverTimestamp(),
+    }
+  );
+
+  return {
+    friendshipId: friendshipRef.id,
+  };
 }
 
-/** Delete a friends/{friendshipId} doc. */
-export async function removeFriend(friendshipId) {
-  if (!USE_FIREBASE) {
-    console.info("[firestore stub] removeFriend:", friendshipId);
-    return true;
+/* =========================================================
+   REJECT FRIEND REQUEST
+   ========================================================= */
+
+export async function rejectFriendRequest(
+  requestId
+) {
+  if (!requestId) {
+    throw new Error("Request ID is required");
   }
-  // return deleteDoc(doc(db, "friends", friendshipId));
+
+  const requestRef = doc(
+    db,
+    "friendRequests",
+    requestId
+  );
+
+  await updateDoc(requestRef, {
+    status: "rejected",
+  });
+
+  return true;
 }
 
-/** Create a blockedUsers doc and remove any existing friendship/requests. */
-export async function blockUser(blockerId, blockedUserId) {
-  if (!USE_FIREBASE) {
-    console.info("[firestore stub] blockUser:", blockerId, "blocks", blockedUserId);
-    return { blockId: `mock_${Date.now()}` };
+/* =========================================================
+   CANCEL FRIEND REQUEST
+   ========================================================= */
+
+export async function cancelFriendRequest(
+  requestId
+) {
+  if (!requestId) {
+    throw new Error("Request ID is required");
   }
-  // return addDoc(collection(db, "blockedUsers"), {
-  //   blockerId, blockedUserId, createdAt: serverTimestamp(),
-  // });
+
+  const requestRef = doc(
+    db,
+    "friendRequests",
+    requestId
+  );
+
+  await deleteDoc(requestRef);
+
+  return true;
 }
 
-/** Delete a blockedUsers doc. Per spec, this does NOT restore friendship. */
-export async function unblockUser(blockId) {
-  if (!USE_FIREBASE) {
-    console.info("[firestore stub] unblockUser:", blockId);
-    return true;
-  }
-  // return deleteDoc(doc(db, "blockedUsers", blockId));
+/* =========================================================
+   GET FRIENDSHIPS
+   ========================================================= */
+
+export async function getFriends(userId) {
+  const friendsRef = collection(db, "friends");
+
+  const q1 = query(
+    friendsRef,
+    where("user1", "==", userId)
+  );
+
+  const q2 = query(
+    friendsRef,
+    where("user2", "==", userId)
+  );
+
+  const [snapshot1, snapshot2] =
+    await Promise.all([
+      getDocs(q1),
+      getDocs(q2),
+    ]);
+
+  const friendships = [
+    ...snapshot1.docs,
+    ...snapshot2.docs,
+  ];
+
+  return friendships.map((friendship) => {
+    const data = friendship.data();
+
+    return {
+      friendshipId: friendship.id,
+      ...data,
+      friendId:
+        data.user1 === userId
+          ? data.user2
+          : data.user1,
+    };
+  });
 }
 
-/** Update users/{userId} weatherSharing + which fields are shared. */
-export async function updateWeatherSharing(userId, settings) {
-  if (!USE_FIREBASE) {
-    console.info("[firestore stub] updateWeatherSharing:", userId, settings);
-    return true;
+/* =========================================================
+   REMOVE FRIEND
+   ========================================================= */
+
+export async function removeFriend(
+  friendshipId
+) {
+  if (!friendshipId) {
+    throw new Error("Friendship ID is required");
   }
-  // return updateDoc(doc(db, "users", userId), settings);
+
+  const friendshipRef = doc(
+    db,
+    "friends",
+    friendshipId
+  );
+
+  await deleteDoc(friendshipRef);
+
+  return true;
 }
 
-/** Update users/{userId} locationSharing ("off" | "approximate" | "exact"). */
-export async function updateLocationSharing(userId, mode) {
-  if (!USE_FIREBASE) {
-    console.info("[firestore stub] updateLocationSharing:", userId, mode);
-    return true;
+/* =========================================================
+   BLOCK USER
+   ========================================================= */
+
+export async function blockUser(
+  blockerId,
+  blockedUserId
+) {
+  if (!blockerId || !blockedUserId) {
+    throw new Error("Invalid block data");
   }
-  // return updateDoc(doc(db, "users", userId), { locationSharing: mode });
+
+  const blockedRef = collection(
+    db,
+    "blockedUsers"
+  );
+
+  const blockRef = await addDoc(
+    blockedRef,
+    {
+      blockerId,
+      blockedUserId,
+      createdAt: serverTimestamp(),
+    }
+  );
+
+  return {
+    blockId: blockRef.id,
+  };
 }
 
-/** Update users/{userId} latitude/longitude. */
-export async function updateUserLocation(userId, latitude, longitude) {
-  if (!USE_FIREBASE) {
-    console.info("[firestore stub] updateUserLocation:", userId, latitude, longitude);
-    return true;
+/* =========================================================
+   UNBLOCK USER
+   ========================================================= */
+
+export async function unblockUser(
+  blockId
+) {
+  if (!blockId) {
+    throw new Error("Block ID is required");
   }
-  // return updateDoc(doc(db, "users", userId), { latitude, longitude });
+
+  const blockRef = doc(
+    db,
+    "blockedUsers",
+    blockId
+  );
+
+  await deleteDoc(blockRef);
+
+  return true;
 }
+
+/* =========================================================
+   WEATHER SHARING
+   ========================================================= */
+
+export async function updateWeatherSharing(
+  userId,
+  settings
+) {
+  if (!userId) {
+    throw new Error("User ID is required");
+  }
+
+  const userRef = doc(db, "users", userId);
+
+  await updateDoc(userRef, settings);
+
+  return true;
+}
+
+/* =========================================================
+   LOCATION SHARING
+   ========================================================= */
+
+export async function updateUserLocation(
+  userId,
+  latitude,
+  longitude
+) {
+  if (!userId) {
+    throw new Error("User ID is required");
+  }
+
+  const userRef = doc(db, "users", userId);
+
+  await setDoc(
+    userRef,
+    {
+      latitude,
+      longitude,
+    },
+    { merge: true }
+  );
+
+  return true;
+}
+
+/* =========================================================
+   USER LOCATION
+   ========================================================= */
+

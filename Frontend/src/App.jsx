@@ -51,13 +51,8 @@ function AppShell() {
 }
 
 export default function App() {
-   const [user, setUser] = useState(null);
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  console.log("APP IS RUNNING");
-
-  
-  
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -67,21 +62,26 @@ export default function App() {
 
     return () => unsubscribe();
   }, []);
-  // Wait for Firebase to check the current session
+
+  // Firebase is checking the current login session
   if (loading) {
     return (
       <div className="min-h-screen bg-sky-wash flex items-center justify-center">
-        <p className="text-sm text-ink-400">Loading WeatherHub...</p>
+        <p className="text-sm text-ink-400">
+          Loading WeatherCircle...
+        </p>
       </div>
     );
   }
-  // User is NOT logged in
+
+  // User is logged out
   if (!user) {
-    return <Login  />;
+    return <Login />;
   }
 
+  // User is logged in
   return (
-    <AppProvider>
+    <AppProvider firebaseUser={user}>
       <BrowserRouter>
         <AppShell />
       </BrowserRouter>
