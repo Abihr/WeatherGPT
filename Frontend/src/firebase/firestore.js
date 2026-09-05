@@ -4,6 +4,7 @@ import {
   getDoc,
   getDocs,
   addDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   query,
@@ -12,7 +13,6 @@ import {
 } from "firebase/firestore";
 
 import { db } from "./firebase";
-import { setDoc } from "firebase/firestore";
 
 /* =========================================================
    USERS
@@ -113,7 +113,7 @@ export async function sendFriendRequest(
     throw new Error("Friend request already sent");
   }
 
-  /* Create request */
+// Send friend request
   const requestRef = await addDoc(
     requestsRef,
     {
@@ -191,7 +191,7 @@ export async function acceptFriendRequest(
     throw new Error("Invalid friend request data");
   }
 
-  /* Update request */
+  // Update request
   const requestRef = doc(
     db,
     "friendRequests",
@@ -202,21 +202,25 @@ export async function acceptFriendRequest(
     status: "accepted",
   });
 
-  /* Create friendship */
-  const friendsRef = collection(db, "friends");
-
-  const friendshipRef = await addDoc(
-    friendsRef,
+  // Add user2 to user1's friends
+  await setDoc(
+    doc(db, "users", user1, "friends", user2),
     {
-      user1,
-      user2,
+      userId: user2,
       createdAt: serverTimestamp(),
     }
   );
 
-  return {
-    friendshipId: friendshipRef.id,
-  };
+  // Add user1 to user2's friends
+  await setDoc(
+    doc(db, "users", user2, "friends", user1),
+    {
+      userId: user1,
+      createdAt: serverTimestamp(),
+    }
+  );
+
+  return true;
 }
 
 /* =========================================================
@@ -270,61 +274,52 @@ export async function cancelFriendRequest(
    ========================================================= */
 
 export async function getFriends(userId) {
-  const friendsRef = collection(db, "friends");
+  if (!userId) return [];
 
-  const q1 = query(
-    friendsRef,
-    where("user1", "==", userId)
+  const friendsRef = collection(
+    db,
+    "users",
+    userId,
+    "friends"
   );
 
-  const q2 = query(
-    friendsRef,
-    where("user2", "==", userId)
+  const snapshot = await getDocs(friendsRef);
+
+  const friends = await Promise.all(
+    snapshot.docs.map(async (friendDoc) => {
+      const friendId = friendDoc.id;
+
+      const friend = await getUser(friendId);
+
+      return {
+        friendshipId: friendDoc.id,
+        friendId,
+        ...friend,
+      };
+    })
   );
 
-  const [snapshot1, snapshot2] =
-    await Promise.all([
-      getDocs(q1),
-      getDocs(q2),
-    ]);
-
-  const friendships = [
-    ...snapshot1.docs,
-    ...snapshot2.docs,
-  ];
-
-  return friendships.map((friendship) => {
-    const data = friendship.data();
-
-    return {
-      friendshipId: friendship.id,
-      ...data,
-      friendId:
-        data.user1 === userId
-          ? data.user2
-          : data.user1,
-    };
-  });
+  return friends.filter(Boolean);
 }
 
 /* =========================================================
    REMOVE FRIEND
    ========================================================= */
 
-export async function removeFriend(
-  friendshipId
-) {
-  if (!friendshipId) {
-    throw new Error("Friendship ID is required");
+export async function removeFriend(userId, friendId) {
+  if (!userId || !friendId) {
+    throw new Error("User ID and Friend ID are required");
   }
 
-  const friendshipRef = doc(
-    db,
-    "friends",
-    friendshipId
+  // Remove friend from current user's list
+  await deleteDoc(
+    doc(db, "users", userId, "friends", friendId)
   );
 
-  await deleteDoc(friendshipRef);
+  // Remove current user from friend's list
+  await deleteDoc(
+    doc(db, "users", friendId, "friends", userId)
+  );
 
   return true;
 }
@@ -405,6 +400,27 @@ export async function updateWeatherSharing(
    LOCATION SHARING
    ========================================================= */
 
+export async function updateLocationSharing(
+  userId,
+  mode
+) {
+  if (!userId) {
+    throw new Error("User ID is required");
+  }
+
+  const userRef = doc(db, "users", userId);
+
+  await updateDoc(userRef, {
+    locationSharing: mode,
+  });
+
+  return true;
+}
+
+/* =========================================================
+   USER LOCATION
+   ========================================================= */
+
 export async function updateUserLocation(
   userId,
   latitude,
@@ -416,19 +432,10 @@ export async function updateUserLocation(
 
   const userRef = doc(db, "users", userId);
 
-  await setDoc(
-    userRef,
-    {
-      latitude,
-      longitude,
-    },
-    { merge: true }
-  );
+  await updateDoc(userRef, {
+    latitude,
+    longitude,
+  });
 
   return true;
 }
-
-/* =========================================================
-   USER LOCATION
-   ========================================================= */
-
