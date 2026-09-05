@@ -1,0 +1,454 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  Train, 
+  AlertTriangle, 
+  CheckCircle, 
+  Clock, 
+  MapPin, 
+  RefreshCw,
+  AlertCircle,
+  CloudRain,
+  Wind,
+  Thermometer,
+  Droplets,
+  ChevronDown,
+  ChevronUp
+} from 'lucide-react';
+
+// Mock Data - Replace with API calls later
+const MOCK_STATIONS = [
+  { id: '1', name: 'Mumbai Central', code: 'BCT', zone: 'Western' },
+  { id: '2', name: 'Delhi Junction', code: 'DLI', zone: 'Northern' },
+  { id: '3', name: 'Kolkata Howrah', code: 'HWH', zone: 'Eastern' },
+  { id: '4', name: 'Chennai Central', code: 'MAS', zone: 'Southern' },
+  { id: '5', name: 'Surat', code: 'ST', zone: 'Western' },
+  { id: '6', name: 'Patna Junction', code: 'PNBE', zone: 'East Central' },
+  { id: '7', name: 'Lucknow Charbagh', code: 'LKO', zone: 'Northern' },
+];
+
+const MOCK_WEATHER = [
+  {
+    id: '1',
+    stationName: 'Mumbai Central',
+    stationCode: 'BCT',
+    weatherStatus: 'Caution',
+    temperature: 28,
+    humidity: 85,
+    rainfall: 45,
+    windSpeed: 12,
+    waterLevel: 2.1,
+    alertMessage: 'Heavy rainfall expected in next 2 hours. Track monitoring advised.',
+    lastUpdated: new Date().toISOString(),
+    trainDelays: 3,
+    routeStatus: 'Partially Closed'
+  },
+  {
+    id: '2',
+    stationName: 'Delhi Junction',
+    stationCode: 'DLI',
+    weatherStatus: 'Safe',
+    temperature: 35,
+    humidity: 45,
+    rainfall: 0,
+    windSpeed: 8,
+    waterLevel: 0.5,
+    lastUpdated: new Date().toISOString(),
+    trainDelays: 0,
+    routeStatus: 'Open'
+  },
+  {
+    id: '3',
+    stationName: 'Kolkata Howrah',
+    stationCode: 'HWH',
+    weatherStatus: 'Alert',
+    temperature: 30,
+    humidity: 78,
+    rainfall: 28,
+    windSpeed: 15,
+    waterLevel: 3.8,
+    alertMessage: 'Water level rising. Flood warning issued for surrounding areas.',
+    lastUpdated: new Date().toISOString(),
+    trainDelays: 5,
+    routeStatus: 'Partially Closed'
+  },
+  {
+    id: '4',
+    stationName: 'Chennai Central',
+    stationCode: 'MAS',
+    weatherStatus: 'Safe',
+    temperature: 32,
+    humidity: 65,
+    rainfall: 2,
+    windSpeed: 6,
+    waterLevel: 0.8,
+    lastUpdated: new Date().toISOString(),
+    trainDelays: 0,
+    routeStatus: 'Open'
+  },
+  {
+    id: '5',
+    stationName: 'Surat',
+    stationCode: 'ST',
+    weatherStatus: 'Critical',
+    temperature: 26,
+    humidity: 90,
+    rainfall: 78,
+    windSpeed: 20,
+    waterLevel: 5.2,
+    alertMessage: '⚠️ FLOOD ALERT: Track submerged. All trains cancelled.',
+    lastUpdated: new Date().toISOString(),
+    trainDelays: 12,
+    routeStatus: 'Closed'
+  },
+  {
+    id: '6',
+    stationName: 'Patna Junction',
+    stationCode: 'PNBE',
+    weatherStatus: 'Caution',
+    temperature: 29,
+    humidity: 82,
+    rainfall: 15,
+    windSpeed: 10,
+    waterLevel: 1.8,
+    alertMessage: 'Moderate rain expected. Monitor water levels.',
+    lastUpdated: new Date().toISOString(),
+    trainDelays: 1,
+    routeStatus: 'Open'
+  },
+  {
+    id: '7',
+    stationName: 'Lucknow Charbagh',
+    stationCode: 'LKO',
+    weatherStatus: 'Safe',
+    temperature: 33,
+    humidity: 55,
+    rainfall: 0,
+    windSpeed: 7,
+    waterLevel: 0.3,
+    lastUpdated: new Date().toISOString(),
+    trainDelays: 0,
+    routeStatus: 'Open'
+  },
+];
+
+const RailwayWeather = () => {
+  const [selectedStation, setSelectedStation] = useState('all');
+  const [weatherData, setWeatherData] = useState(MOCK_WEATHER);
+  const [loading, setLoading] = useState(false);
+  const [showAlert, setShowAlert] = useState(true);
+  const [expandedCard, setExpandedCard] = useState(null);
+
+  // Get unique stations for filter
+  const uniqueStations = [...new Set(weatherData.map(w => w.stationCode))];
+
+  const filteredData = selectedStation === 'all' 
+    ? weatherData 
+    : weatherData.filter(w => w.stationCode === selectedStation);
+
+  // Status helpers
+  const getStatusColor = (status) => {
+    switch(status) {
+      case 'Safe': return 'border-green-500';
+      case 'Caution': return 'border-yellow-500';
+      case 'Alert': return 'border-orange-500';
+      case 'Critical': return 'border-red-600';
+      default: return 'border-gray-500';
+    }
+  };
+
+  const getStatusBg = (status) => {
+    switch(status) {
+      case 'Safe': return 'bg-green-50 text-green-700';
+      case 'Caution': return 'bg-yellow-50 text-yellow-700';
+      case 'Alert': return 'bg-orange-50 text-orange-700';
+      case 'Critical': return 'bg-red-50 text-red-700';
+      default: return 'bg-gray-50 text-gray-700';
+    }
+  };
+
+  const getRouteStatusColor = (status) => {
+    switch(status) {
+      case 'Open': return 'bg-green-100 text-green-800';
+      case 'Partially Closed': return 'bg-yellow-100 text-yellow-800';
+      case 'Closed': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getWaterLevelColor = (level) => {
+    if (level > 4) return 'text-red-600';
+    if (level > 3) return 'text-orange-500';
+    if (level > 2) return 'text-yellow-500';
+    return 'text-green-600';
+  };
+
+  const hasCriticalAlerts = weatherData.some(w => w.weatherStatus === 'Critical');
+
+  const refreshData = () => {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+    }, 1500);
+  };
+
+  const toggleExpand = (id) => {
+    setExpandedCard(expandedCard === id ? null : id);
+  };
+
+  // Count critical alerts
+  const criticalCount = weatherData.filter(w => w.weatherStatus === 'Critical').length;
+
+  return (
+    <div className="min-h-screen bg-ink-50/50 p-6">
+      {/* Header */}
+      <div className="flex flex-wrap justify-between items-center mb-6">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-sky-100 rounded-xl">
+            <Train className="w-6 h-6 text-sky-600" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-display font-bold text-ink-900">Railway Weather Updates</h2>
+            <p className="text-sm text-ink-400">Real-time flood alerts & weather monitoring for railway stations</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 mt-2 sm:mt-0">
+          {criticalCount > 0 && (
+            <div className="flex items-center gap-2 bg-red-50 text-red-600 px-3 py-1.5 rounded-full">
+              <AlertCircle className="w-4 h-4" />
+              <span className="text-sm font-medium">{criticalCount} Critical Alert{criticalCount > 1 ? 's' : ''}</span>
+            </div>
+          )}
+          <button
+            onClick={refreshData}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors disabled:opacity-50 text-sm font-medium"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      {/* Critical Alert Banner */}
+      {hasCriticalAlerts && showAlert && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex flex-wrap justify-between items-center">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-6 h-6 text-red-500 animate-pulse" />
+            <div>
+              <p className="text-red-600 font-medium">⚠️ Critical Weather Alert</p>
+              <p className="text-sm text-ink-500">Multiple stations reporting severe weather conditions. Immediate attention required.</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => setShowAlert(false)} 
+            className="text-ink-400 hover:text-ink-700 transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-4 mb-6">
+        <select
+          value={selectedStation}
+          onChange={(e) => setSelectedStation(e.target.value)}
+          className="px-4 py-2.5 bg-white border border-ink-200 rounded-lg text-ink-700 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent text-sm"
+        >
+          <option value="all">All Stations ({weatherData.length})</option>
+          {MOCK_STATIONS.map(station => (
+            <option key={station.id} value={station.code}>
+              {station.name} ({station.code})
+            </option>
+          ))}
+        </select>
+        
+        <div className="flex gap-2">
+          <button className="px-4 py-2.5 bg-white border border-ink-200 rounded-lg text-ink-600 hover:bg-ink-50 transition-colors text-sm flex items-center gap-2">
+            <MapPin className="w-4 h-4" />
+            Nearby Stations
+          </button>
+        </div>
+      </div>
+
+      {/* Stats Summary */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white rounded-xl p-4 shadow-card">
+          <p className="text-sm text-ink-400">Total Stations</p>
+          <p className="text-2xl font-bold text-ink-900">{weatherData.length}</p>
+        </div>
+        <div className="bg-white rounded-xl p-4 shadow-card">
+          <p className="text-sm text-ink-400">Critical Alerts</p>
+          <p className={`text-2xl font-bold ${criticalCount > 0 ? 'text-red-600' : 'text-green-600'}`}>
+            {criticalCount}
+          </p>
+        </div>
+        <div className="bg-white rounded-xl p-4 shadow-card">
+          <p className="text-sm text-ink-400">Trains Delayed</p>
+          <p className="text-2xl font-bold text-yellow-600">
+            {weatherData.reduce((sum, w) => sum + (w.trainDelays || 0), 0)}
+          </p>
+        </div>
+        <div className="bg-white rounded-xl p-4 shadow-card">
+          <p className="text-sm text-ink-400">Routes Closed</p>
+          <p className="text-2xl font-bold text-red-600">
+            {weatherData.filter(w => w.routeStatus === 'Closed').length}
+          </p>
+        </div>
+      </div>
+
+      {/* Station Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+        {filteredData.map((station) => (
+          <div
+            key={station.id}
+            className={`bg-white rounded-xl p-5 border-l-4 shadow-card hover:shadow-pop transition-all ${getStatusColor(station.weatherStatus)}`}
+          >
+            {/* Header */}
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <h3 className="font-display font-semibold text-ink-900">{station.stationName}</h3>
+                <p className="text-sm text-ink-400">{station.stationCode}</p>
+              </div>
+              <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBg(station.weatherStatus)}`}>
+                {station.weatherStatus}
+              </span>
+            </div>
+
+            {/* Weather Details */}
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div className="flex items-center gap-2 text-sm text-ink-600 bg-ink-50 px-3 py-1.5 rounded-lg">
+                <Thermometer className="w-4 h-4 text-sky-500" />
+                <span>{station.temperature}°C</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-ink-600 bg-ink-50 px-3 py-1.5 rounded-lg">
+                <Droplets className="w-4 h-4 text-sky-500" />
+                <span>{station.humidity}%</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-ink-600 bg-ink-50 px-3 py-1.5 rounded-lg">
+                <CloudRain className="w-4 h-4 text-sky-500" />
+                <span>{station.rainfall} mm</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-ink-600 bg-ink-50 px-3 py-1.5 rounded-lg">
+                <Wind className="w-4 h-4 text-sky-500" />
+                <span>{station.windSpeed} km/h</span>
+              </div>
+            </div>
+
+            {/* Water Level & Route Status */}
+            <div className="flex justify-between items-center p-3 bg-ink-50 rounded-lg mb-3">
+              <div>
+                <p className="text-xs text-ink-400">Water Level</p>
+                <p className={`text-sm font-semibold ${getWaterLevelColor(station.waterLevel)}`}>
+                  {station.waterLevel} m
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-ink-400">Route Status</p>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRouteStatusColor(station.routeStatus)}`}>
+                  {station.routeStatus}
+                </span>
+              </div>
+            </div>
+
+            {/* Alert Message */}
+            {station.alertMessage && (
+              <div className={`p-2 rounded-lg text-sm mb-2 ${
+                station.weatherStatus === 'Critical' ? 'bg-red-50 text-red-600' :
+                station.weatherStatus === 'Alert' ? 'bg-orange-50 text-orange-600' :
+                'bg-yellow-50 text-yellow-600'
+              }`}>
+                {station.alertMessage}
+              </div>
+            )}
+
+            {/* Train Delays */}
+            {station.trainDelays > 0 && (
+              <div className="flex items-center gap-2 text-sm text-yellow-600 bg-yellow-50 px-3 py-1.5 rounded-lg">
+                <Clock className="w-4 h-4" />
+                <span>{station.trainDelays} trains delayed</span>
+              </div>
+            )}
+
+            {/* Expandable Details */}
+            <button
+              onClick={() => toggleExpand(station.id)}
+              className="w-full mt-3 flex items-center justify-center gap-2 text-sm text-ink-400 hover:text-ink-600 transition-colors"
+            >
+              {expandedCard === station.id ? (
+                <>Hide Details <ChevronUp className="w-4 h-4" /></>
+              ) : (
+                <>View Details <ChevronDown className="w-4 h-4" /></>
+              )}
+            </button>
+
+            {expandedCard === station.id && (
+              <div className="mt-3 p-3 bg-ink-50 rounded-lg space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-ink-400">Station Code</span>
+                  <span className="text-ink-700 font-medium">{station.stationCode}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-ink-400">Zone</span>
+                  <span className="text-ink-700 font-medium">
+                    {MOCK_STATIONS.find(s => s.code === station.stationCode)?.zone || 'N/A'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-ink-400">Last Updated</span>
+                  <span className="text-ink-700 font-medium">
+                    {new Date(station.lastUpdated).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Last Updated - Always visible */}
+            <div className="text-xs text-ink-400 mt-2">
+              Updated: {new Date(station.lastUpdated).toLocaleTimeString()}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Empty State */}
+      {filteredData.length === 0 && (
+        <div className="text-center py-16 bg-white rounded-xl shadow-card">
+          <Train className="w-20 h-20 text-ink-300 mx-auto mb-4" />
+          <p className="text-ink-500 text-lg font-medium">No railway weather updates available</p>
+          <p className="text-ink-400 text-sm">Try selecting a different station or refresh the page</p>
+        </div>
+      )}
+
+      {/* Legend */}
+      <div className="mt-8 p-4 bg-white rounded-xl shadow-card">
+        <h4 className="text-sm font-medium text-ink-500 mb-2">Status Legend</h4>
+        <div className="flex flex-wrap gap-4">
+          <div className="flex items-center gap-2 text-sm text-ink-600">
+            <span className="w-3 h-3 bg-green-500 rounded-full"></span> Safe
+          </div>
+          <div className="flex items-center gap-2 text-sm text-ink-600">
+            <span className="w-3 h-3 bg-yellow-500 rounded-full"></span> Caution
+          </div>
+          <div className="flex items-center gap-2 text-sm text-ink-600">
+            <span className="w-3 h-3 bg-orange-500 rounded-full"></span> Alert
+          </div>
+          <div className="flex items-center gap-2 text-sm text-ink-600">
+            <span className="w-3 h-3 bg-red-600 rounded-full"></span> Critical
+          </div>
+          <div className="flex items-center gap-2 text-sm text-ink-600 ml-4">
+            <span className="w-8 h-0.5 bg-green-500"></span> Route Open
+          </div>
+          <div className="flex items-center gap-2 text-sm text-ink-600">
+            <span className="w-8 h-0.5 bg-yellow-500"></span> Partially Closed
+          </div>
+          <div className="flex items-center gap-2 text-sm text-ink-600">
+            <span className="w-8 h-0.5 bg-red-600"></span> Route Closed
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default RailwayWeather;
