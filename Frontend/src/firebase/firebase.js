@@ -8,8 +8,9 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getDatabase } from "firebase/database";
 
-export const USE_FIREBASE = true;
+const USE_FIREBASE = true;
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -20,15 +21,20 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
   databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
-
 };
 
-let app, auth, db;
+const app = initializeApp(firebaseConfig);
 
-if (USE_FIREBASE) {
-  app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  db = getFirestore(app);
-}
+const auth = getAuth(app);
 
-export { app, auth, db };
+const db = getFirestore(app);
+
+const database = getDatabase(app);
+
+export {
+  app,
+  auth,
+  db,
+  database,
+  USE_FIREBASE,
+};

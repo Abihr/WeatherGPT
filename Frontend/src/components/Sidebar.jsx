@@ -9,8 +9,6 @@ import {
   User,
   Settings,
   CloudSun,
-  Train,           // ← NEW
-  AlertTriangle,   // ← NEW
 } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import logo from "../assets/logo_simple.png";
@@ -22,15 +20,11 @@ const links = [
   { to: "/map", label: "Map", icon: Map },
   { to: "/compare", label: "Compare", icon: RefreshCw },
   { to: "/alerts", label: "Alerts", icon: Bell },
-  { to: "/railway", label: "Railway", icon: Train }, // ← NEW
   { to: "/profile", label: "Profile", icon: User },
 ];
 
 export default function Sidebar() {
   const { received } = useApp();
-
-  // Mock data - replace with actual state later
-  const criticalAlerts = 2; // ← For badge on Railway
 
   return (
     <aside className="hidden md:flex md:flex-col w-64 shrink-0 h-screen sticky top-0 border-r border-sky-100 bg-white/70 backdrop-blur-sm px-4 py-6">
@@ -53,7 +47,7 @@ export default function Sidebar() {
         transition-transform duration-200
         hover:scale-110
       "
-            alt="WeatherCircle logo"
+            alt="WeatherHub logo"
           />
         </div>
 
@@ -66,10 +60,11 @@ export default function Sidebar() {
     tracking-tight
   "
         >
-          WeatherCircle
+          WeatherHub
         </span>
       </div>
 
+      {/* <CloudSun size={19} className="text-white" strokeWidth={2.2} /> */}
       <nav className="flex-1 flex flex-col gap-1">
         {links.map(({ to, label, icon: Icon }) => (
           <NavLink
@@ -86,18 +81,9 @@ export default function Sidebar() {
           >
             <Icon size={18} strokeWidth={2.1} />
             <span className="flex-1">{label}</span>
-            
-            {/* Badge for Requests */}
             {label === "Requests" && received.length > 0 && (
               <span className="text-[11px] font-semibold bg-sun-400 text-white rounded-full h-5 min-w-5 px-1 flex items-center justify-center">
                 {received.length}
-              </span>
-            )}
-
-            {/* Badge for Railway Critical Alerts */}
-            {label === "Railway" && criticalAlerts > 0 && (
-              <span className="text-[11px] font-semibold bg-red-500 text-white rounded-full h-5 min-w-5 px-1 flex items-center justify-center animate-pulse">
-                {criticalAlerts}
               </span>
             )}
           </NavLink>

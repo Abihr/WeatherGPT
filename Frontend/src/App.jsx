@@ -1,10 +1,17 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "./firebase/firebase";
+
 import { AppProvider } from "./context/AppContext";
+
 import Sidebar from "./components/Sidebar";
 import Navbar from "./components/Navbar";
 import BottomNav from "./components/BottomNav";
 import ToastStack from "./components/Toast";
+
 import Login from "./pages/Login";
 import Home from "./pages/Home";
 import Friends from "./pages/Friends";
@@ -15,7 +22,6 @@ import Profile from "./pages/Profile";
 import BlockedUsers from "./pages/BlockedUsers";
 import Alerts from "./pages/Alerts";
 import Settings from "./pages/Settings";
-import RailwayWeather from "./components/RailwayWeather"; // ← ADD THIS IMPORT
 
 function AppShell() {
   return (
@@ -35,7 +41,6 @@ function AppShell() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/blocked" element={<BlockedUsers />} />
           <Route path="/settings" element={<Settings />} />
-          <Route path="/railway" element={<RailwayWeather />} /> {/* ← ADD THIS ROUTE */}
         </Routes>
       </div>
 
@@ -46,32 +51,37 @@ function AppShell() {
 }
 
 export default function App() {
-  const [authed, setAuthed] = useState(true);
-
-  console.log("APP IS RUNNING");
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log("STARTING WEATHER REQUEST");
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
 
-    fetch("http://localhost:5000/api/weather?city=Kolkata")
-      .then((response) => {
-        console.log("BACKEND RESPONSE STATUS:", response.status);
-        return response.json();
-      })
-      .then((data) => {
-        console.log("WEATHER DATA:", data);
-      })
-      .catch((error) => {
-        console.error("WEATHER ERROR:", error);
-      });
+    return () => unsubscribe();
   }, []);
 
-  if (!authed) {
-    return <Login onAuth={() => setAuthed(true)} />;
+  // Firebase is checking the current login session
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-sky-wash flex items-center justify-center">
+        <p className="text-sm text-ink-400">
+          Loading WeatherCircle...
+        </p>
+      </div>
+    );
   }
 
+  // User is logged out
+  if (!user) {
+    return <Login />;
+  }
+
+  // User is logged in
   return (
-    <AppProvider>
+    <AppProvider firebaseUser={user}>
       <BrowserRouter>
         <AppShell />
       </BrowserRouter>
