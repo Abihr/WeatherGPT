@@ -104,7 +104,7 @@ export default function Profile() {
             Profile Card
         ======================================== */}
 
-        <div className="rounded-xl3 bg-hero-gradient text-white p-6 flex items-center gap-4 shadow-pop">
+        <div className="rounded-xl3 bg-hero-gradient text-white p-5 flex items-center gap-4 shadow-pop">
 
           <div className="h-16 w-16 rounded-full bg-white/20 backdrop-blur-sm font-display font-bold text-xl flex items-center justify-center shrink-0">
             {initials}
@@ -112,15 +112,13 @@ export default function Profile() {
 
           <div>
 
-            <h1 className="text-xl font-display font-extrabold">
+            <h1 className="text-2xl font-display font-extrabold">
               {user?.name || "User"}
             </h1>
 
-            <p className="text-sky-100 text-sm">
-              @{user?.username || "user"}
-            </p>
+            
 
-            <p className="text-sky-100 text-xs flex items-center gap-1 mt-1">
+            <p className="text-sky-100 text-2xs flex items-center gap-1 mt-1">
               <MapPin size={11} />
               {user?.location || "Location not available"}
             </p>
