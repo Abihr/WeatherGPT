@@ -76,7 +76,7 @@ export function ReceivedRequestCard({ request }) {
         </p>
 
         <p className="text-xs text-ink-400 truncate">
-          wants to add you as a friend · {locationText}
+          wants to add you as a friend ·
         </p>
 
       </div>

@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, UserPlus, Inbox } from "lucide-react";
-import * as fs from "../firebase/firestore";
+import {
+  Search,
+  UserPlus,
+  Inbox,
+} from "lucide-react";
 
 import { useApp } from "../context/AppContext";
 
@@ -9,7 +12,7 @@ import FriendCard from "../components/FriendCard";
 import AddFriendModal from "../components/AddFriendModal";
 import BlockUserModal from "../components/BlockUserModal";
 import EmptyState from "../components/EmptyState";
-
+import RefreshButton from "../components/Refreshbutton";
 export default function Friends() {
   const { friendsList, received } = useApp();
   const navigate = useNavigate();
@@ -20,9 +23,7 @@ export default function Friends() {
 
   // Remove duplicate friends based on ID
   const uniqueFriends = Array.from(
-    new Map(
-      friendsList.map((friend) => [friend.id, friend])
-    ).values()
+    new Map(friendsList.map((friend) => [friend.id, friend])).values(),
   );
 
   const filtered = uniqueFriends.filter((friend) => {
@@ -33,20 +34,18 @@ export default function Friends() {
     const name = friend.name?.toLowerCase() || "";
     const username = friend.username?.toLowerCase() || "";
 
-    return (
-      name.includes(t) ||
-      username.includes(t)
-    );
+    return name.includes(t) || username.includes(t);
   });
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 pb-28 md:pb-10 flex flex-col gap-5">
-
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <h1 className="text-xl md:text-2xl font-display font-extrabold text-ink-900">
           My Weather Circle
         </h1>
+
+        <RefreshButton />
       </div>
 
       {/* Actions */}
@@ -65,7 +64,6 @@ export default function Friends() {
         >
           <Inbox size={15} />
           Friend Requests
-
           {received.length > 0 && (
             <span className="absolute -top-1.5 -right-1.5 h-5 min-w-5 px-1 rounded-full bg-sun-400 text-white text-[10px] font-bold flex items-center justify-center">
               {received.length}
@@ -93,11 +91,7 @@ export default function Friends() {
       {filtered.length === 0 ? (
         <EmptyState
           icon="👥"
-          title={
-            uniqueFriends.length === 0
-              ? "No friends yet"
-              : "No matches"
-          }
+          title={uniqueFriends.length === 0 ? "No friends yet" : "No matches"}
           message={
             uniqueFriends.length === 0
               ? "Add friends to start comparing weather and sharing your location."
@@ -124,10 +118,7 @@ export default function Friends() {
       )}
 
       {/* Modals */}
-      <AddFriendModal
-        open={addOpen}
-        onClose={() => setAddOpen(false)}
-      />
+      <AddFriendModal open={addOpen} onClose={() => setAddOpen(false)} />
 
       <BlockUserModal
         open={!!blockTarget}

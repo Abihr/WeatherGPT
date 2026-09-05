@@ -236,7 +236,7 @@ export default function AddFriendModal({ open, onClose }) {
                       @{person.username || "username"}
                     </p>
 
-                    {locationText && (
+                    {/* {locationText && (
                       <p className="text-xs text-ink-400 flex items-center gap-1 truncate">
                         <MapPin
                           size={10}
@@ -247,7 +247,7 @@ export default function AddFriendModal({ open, onClose }) {
                           {locationText}
                         </span>
                       </p>
-                    )}
+                    )} */}
                   </div>
 
                   {/* STATUS */}
