@@ -1,5 +1,7 @@
 import { useState } from "react";
+
 import { useNavigate } from "react-router-dom";
+
 import {
   Search,
   UserPlus,
@@ -13,8 +15,14 @@ import AddFriendModal from "../components/AddFriendModal";
 import BlockUserModal from "../components/BlockUserModal";
 import EmptyState from "../components/EmptyState";
 import RefreshButton from "../components/Refreshbutton";
+
 export default function Friends() {
-  const { friendsList, received } = useApp();
+  const {
+    friendsList,
+    received,
+    pushToast,
+  } = useApp();
+
   const navigate = useNavigate();
 
   const [term, setTerm] = useState("");
@@ -23,19 +31,54 @@ export default function Friends() {
 
   // Remove duplicate friends based on ID
   const uniqueFriends = Array.from(
-    new Map(friendsList.map((friend) => [friend.id, friend])).values(),
+    new Map(
+      friendsList.map((friend) => [
+        friend.id,
+        friend,
+      ])
+    ).values()
   );
 
-  const filtered = uniqueFriends.filter((friend) => {
-    const t = term.trim().toLowerCase();
+  const filtered = uniqueFriends.filter(
+    (friend) => {
+      const t = term.trim().toLowerCase();
 
-    if (!t) return true;
+      if (!t) return true;
 
-    const name = friend.name?.toLowerCase() || "";
-    const username = friend.username?.toLowerCase() || "";
+      const name =
+        friend.name?.toLowerCase() || "";
 
-    return name.includes(t) || username.includes(t);
-  });
+      const username =
+        friend.username?.toLowerCase() || "";
+
+      return (
+        name.includes(t) ||
+        username.includes(t)
+      );
+    }
+  );
+
+  // Handle compare button
+  const handleCompare = (friend) => {
+    // Friend has not enabled weather sharing
+    if (friend?.weatherSharing !== true) {
+      pushToast(
+        `${
+          friend?.name || "This friend"
+        }'s weather is not shared`,
+        "error"
+      );
+
+      return;
+    }
+
+    // Weather sharing is enabled
+    navigate("/compare", {
+      state: {
+        friendId: friend.id,
+      },
+    });
+  };
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 pb-28 md:pb-10 flex flex-col gap-5">
@@ -51,6 +94,7 @@ export default function Friends() {
       {/* Actions */}
       <div className="flex gap-2">
         <button
+          type="button"
           onClick={() => setAddOpen(true)}
           className="flex-1 sm:flex-none flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-full bg-sky-500 text-white hover:bg-sky-600 transition-colors"
         >
@@ -59,11 +103,13 @@ export default function Friends() {
         </button>
 
         <button
+          type="button"
           onClick={() => navigate("/requests")}
           className="flex-1 sm:flex-none flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-full bg-sky-50 text-sky-700 hover:bg-sky-100 transition-colors relative"
         >
           <Inbox size={15} />
           Friend Requests
+
           {received.length > 0 && (
             <span className="absolute -top-1.5 -right-1.5 h-5 min-w-5 px-1 rounded-full bg-sun-400 text-white text-[10px] font-bold flex items-center justify-center">
               {received.length}
@@ -80,8 +126,11 @@ export default function Friends() {
         />
 
         <input
+          type="text"
           value={term}
-          onChange={(e) => setTerm(e.target.value)}
+          onChange={(e) =>
+            setTerm(e.target.value)
+          }
           placeholder="Search users..."
           className="w-full bg-white shadow-card rounded-full pl-10 pr-4 py-2.5 text-sm text-ink-800 placeholder:text-ink-400 outline-none focus:ring-2 focus:ring-sky-300 transition-shadow"
         />
@@ -91,7 +140,11 @@ export default function Friends() {
       {filtered.length === 0 ? (
         <EmptyState
           icon="👥"
-          title={uniqueFriends.length === 0 ? "No friends yet" : "No matches"}
+          title={
+            uniqueFriends.length === 0
+              ? "No friends yet"
+              : "No matches"
+          }
           message={
             uniqueFriends.length === 0
               ? "Add friends to start comparing weather and sharing your location."
@@ -105,11 +158,7 @@ export default function Friends() {
               key={friend.id}
               friend={friend}
               onCompare={() =>
-                navigate("/compare", {
-                  state: {
-                    friendId: friend.id,
-                  },
-                })
+                handleCompare(friend)
               }
               onBlock={setBlockTarget}
             />
@@ -118,11 +167,16 @@ export default function Friends() {
       )}
 
       {/* Modals */}
-      <AddFriendModal open={addOpen} onClose={() => setAddOpen(false)} />
+      <AddFriendModal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+      />
 
       <BlockUserModal
         open={!!blockTarget}
-        onClose={() => setBlockTarget(null)}
+        onClose={() =>
+          setBlockTarget(null)
+        }
         person={blockTarget}
       />
     </div>

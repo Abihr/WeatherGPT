@@ -51,41 +51,60 @@ export async function searchUsers(queryText) {
     return [];
   }
 
-  const usersRef = collection(db, "users");
-  const snapshot = await getDocs(usersRef);
+  try {
+    const usersRef = collection(db, "users");
+    const snapshot = await getDocs(usersRef);
 
-  const users = snapshot.docs.map((docSnap) => ({
-    id: docSnap.id,
-    ...docSnap.data(),
-  }));
+    const users = snapshot.docs.map((docSnap) => ({
+      id: docSnap.id,
+      ...docSnap.data(),
+    }));
 
-  return users.filter((user) => {
-    const name = String(user.name || "").toLowerCase();
-    const username = String(user.username || "").toLowerCase();
-    const email = String(user.email || "").toLowerCase();
+    return users.filter((user) => {
+      const name = String(user.name || "").toLowerCase();
+      const username = String(
+        user.username || ""
+      ).toLowerCase();
+      const email = String(
+        user.email || ""
+      ).toLowerCase();
 
-    return (
-      name.includes(text) ||
-      username.includes(text) ||
-      email.includes(text)
-    );
-  });
+      return (
+        name.includes(text) ||
+        username.includes(text) ||
+        email.includes(text)
+      );
+    });
+  } catch (error) {
+    console.error("searchUsers error:", error);
+    return [];
+  }
 }
 
 /* =========================================================
    FRIEND REQUESTS
 ========================================================= */
 
-export async function sendFriendRequest(senderId, receiverId) {
+export async function sendFriendRequest(
+  senderId,
+  receiverId
+) {
   if (!senderId || !receiverId) {
-    throw new Error("Sender and receiver are required");
+    throw new Error(
+      "Sender and receiver are required"
+    );
   }
 
   if (senderId === receiverId) {
-    throw new Error("You cannot send a friend request to yourself");
+    throw new Error(
+      "You cannot send a friend request to yourself"
+    );
   }
 
-  const requestsRef = collection(db, "friendRequests");
+  const requestsRef = collection(
+    db,
+    "friendRequests"
+  );
 
   const existingQuery = query(
     requestsRef,
@@ -94,18 +113,24 @@ export async function sendFriendRequest(senderId, receiverId) {
     where("status", "==", "pending")
   );
 
-  const existingSnapshot = await getDocs(existingQuery);
+  const existingSnapshot =
+    await getDocs(existingQuery);
 
   if (!existingSnapshot.empty) {
-    throw new Error("Friend request already sent");
+    throw new Error(
+      "Friend request already sent"
+    );
   }
 
-  const requestRef = await addDoc(requestsRef, {
-    senderId,
-    receiverId,
-    status: "pending",
-    createdAt: serverTimestamp(),
-  });
+  const requestRef = await addDoc(
+    requestsRef,
+    {
+      senderId,
+      receiverId,
+      status: "pending",
+      createdAt: serverTimestamp(),
+    }
+  );
 
   return {
     requestId: requestRef.id,
@@ -119,55 +144,78 @@ export async function sendFriendRequest(senderId, receiverId) {
    GET RECEIVED REQUESTS
 ========================================================= */
 
-export async function getReceivedRequests(userId) {
+export async function getReceivedRequests(
+  userId
+) {
   if (!userId) return [];
 
-  const requestsRef = collection(db, "friendRequests");
+  try {
+    const requestsRef = collection(
+      db,
+      "friendRequests"
+    );
 
-  const q = query(
-    requestsRef,
-    where("receiverId", "==", userId),
-    where("status", "==", "pending")
-  );
+    const q = query(
+      requestsRef,
+      where("receiverId", "==", userId),
+      where("status", "==", "pending")
+    );
 
-  const snapshot = await getDocs(q);
+    const snapshot = await getDocs(q);
 
-  const requests = await Promise.all(
-    snapshot.docs.map(async (requestDoc) => {
-      const data = requestDoc.data();
+    const requests = await Promise.all(
+      snapshot.docs.map(async (requestDoc) => {
+        const data = requestDoc.data();
 
-      const sender = await getUser(data.senderId);
+        const sender = await getUser(
+          data.senderId
+        );
 
-      return {
-        requestId: requestDoc.id,
-        senderId: data.senderId,
-        receiverId: data.receiverId,
-        status: data.status,
-        createdAt: data.createdAt,
+        return {
+          requestId: requestDoc.id,
 
-        // Sender profile
-        name: sender?.name || "User",
-        username: sender?.username || "",
-        email: sender?.email || "",
-        photoURL: sender?.photoURL || "",
+          senderId: data.senderId,
+          receiverId: data.receiverId,
+          status: data.status,
+          createdAt: data.createdAt,
 
-        // Sender location
-        location: sender?.location || null,
-        locationText: sender?.locationText || "",
-        latitude: sender?.latitude ?? null,
-        longitude: sender?.longitude ?? null,
+          // Sender profile
+          name: sender?.name || "User",
+          username: sender?.username || "",
+          email: sender?.email || "",
+          photoURL: sender?.photoURL || "",
 
-        // Sender weather
-        weather: sender?.weather || null,
+          // Sender location
+          location: sender?.location || null,
+          locationText:
+            sender?.locationText || "",
+          latitude:
+            sender?.latitude ?? null,
+          longitude:
+            sender?.longitude ?? null,
 
-        // Sharing settings
-        weatherSharing: sender?.weatherSharing ?? false,
-        locationSharing: sender?.locationSharing ?? "off",
-      };
-    })
-  );
+          // Sender weather
+          weather: sender?.weather || null,
 
-  return requests;
+          // Sharing settings
+          weatherSharing:
+            sender?.weatherSharing ?? false,
+
+          locationSharing:
+            sender?.locationSharing ?? "off",
+        };
+      })
+    );
+
+    return requests;
+  } catch (error) {
+    console.error(
+      "getReceivedRequests error:",
+      error
+    );
+
+    return [];
+  }
 }
 
 /* =========================================================
@@ -177,52 +225,76 @@ export async function getReceivedRequests(userId) {
 export async function getSentRequests(userId) {
   if (!userId) return [];
 
-  const requestsRef = collection(db, "friendRequests");
+  try {
+    const requestsRef = collection(
+      db,
+      "friendRequests"
+    );
 
-  const q = query(
-    requestsRef,
-    where("senderId", "==", userId),
-    where("status", "==", "pending")
-  );
+    const q = query(
+      requestsRef,
+      where("senderId", "==", userId),
+      where("status", "==", "pending")
+    );
 
-  const snapshot = await getDocs(q);
+    const snapshot = await getDocs(q);
 
-  const requests = await Promise.all(
-    snapshot.docs.map(async (requestDoc) => {
-      const data = requestDoc.data();
+    const requests = await Promise.all(
+      snapshot.docs.map(async (requestDoc) => {
+        const data = requestDoc.data();
 
-      const receiver = await getUser(data.receiverId);
+        const receiver = await getUser(
+          data.receiverId
+        );
 
-      return {
-        requestId: requestDoc.id,
-        senderId: data.senderId,
-        receiverId: data.receiverId,
-        status: data.status,
-        createdAt: data.createdAt,
+        return {
+          requestId: requestDoc.id,
 
-        // Receiver profile
-        name: receiver?.name || "User",
-        username: receiver?.username || "",
-        email: receiver?.email || "",
-        photoURL: receiver?.photoURL || "",
+          senderId: data.senderId,
+          receiverId: data.receiverId,
+          status: data.status,
+          createdAt: data.createdAt,
 
-        // Receiver location
-        location: receiver?.location || null,
-        locationText: receiver?.locationText || "",
-        latitude: receiver?.latitude ?? null,
-        longitude: receiver?.longitude ?? null,
+          // Receiver profile
+          name: receiver?.name || "User",
+          username: receiver?.username || "",
+          email: receiver?.email || "",
+          photoURL:
+            receiver?.photoURL || "",
 
-        // Receiver weather
-        weather: receiver?.weather || null,
+          // Receiver location
+          location:
+            receiver?.location || null,
+          locationText:
+            receiver?.locationText || "",
+          latitude:
+            receiver?.latitude ?? null,
+          longitude:
+            receiver?.longitude ?? null,
 
-        // Sharing settings
-        weatherSharing: receiver?.weatherSharing ?? false,
-        locationSharing: receiver?.locationSharing ?? "off",
-      };
-    })
-  );
+          // Receiver weather
+          weather:
+            receiver?.weather || null,
 
-  return requests;
+          // Sharing settings
+          weatherSharing:
+            receiver?.weatherSharing ?? false,
+
+          locationSharing:
+            receiver?.locationSharing ?? "off",
+        };
+      })
+    );
+
+    return requests;
+  } catch (error) {
+    console.error(
+      "getSentRequests error:",
+      error
+    );
+
+    return [];
+  }
 }
 
 /* =========================================================
@@ -235,7 +307,9 @@ export async function acceptFriendRequest(
   user2
 ) {
   if (!requestId || !user1 || !user2) {
-    throw new Error("Invalid friend request data");
+    throw new Error(
+      "Invalid friend request data"
+    );
   }
 
   if (user1 === user2) {
@@ -293,7 +367,10 @@ export async function acceptFriendRequest(
   // Fetch complete friend's profile
   const friend = await getUser(user2);
 
-  console.log("FRIEND ACCEPTED:", friend);
+  console.log(
+    "FRIEND ACCEPTED:",
+    friend
+  );
 
   return {
     success: true,
@@ -305,9 +382,13 @@ export async function acceptFriendRequest(
    REJECT FRIEND REQUEST
 ========================================================= */
 
-export async function rejectFriendRequest(requestId) {
+export async function rejectFriendRequest(
+  requestId
+) {
   if (!requestId) {
-    throw new Error("Request ID is required");
+    throw new Error(
+      "Request ID is required"
+    );
   }
 
   const requestRef = doc(
@@ -327,9 +408,13 @@ export async function rejectFriendRequest(requestId) {
    CANCEL FRIEND REQUEST
 ========================================================= */
 
-export async function cancelFriendRequest(requestId) {
+export async function cancelFriendRequest(
+  requestId
+) {
   if (!requestId) {
-    throw new Error("Request ID is required");
+    throw new Error(
+      "Request ID is required"
+    );
   }
 
   const requestRef = doc(
@@ -351,6 +436,17 @@ export async function getFriends(userId) {
   if (!userId) return [];
 
   try {
+    /*
+      Friends are stored here:
+
+      users
+        └── currentUser
+              └── friends
+                    ├── friendUID1
+                    ├── friendUID2
+                    └── ...
+    */
+
     const friendsRef = collection(
       db,
       "users",
@@ -358,7 +454,9 @@ export async function getFriends(userId) {
       "friends"
     );
 
-    const snapshot = await getDocs(friendsRef);
+    const snapshot = await getDocs(
+      friendsRef
+    );
 
     console.log(
       "Friend documents found:",
@@ -374,24 +472,21 @@ export async function getFriends(userId) {
       return [];
     }
 
+    /*
+      IMPORTANT:
+      We fetch the friend's USER document
+      every time.
+
+      This means weatherSharing and weather
+      always come from:
+
+      users/{friendId}
+
+      and NOT from the friendship document.
+    */
+
     const friends = await Promise.all(
       snapshot.docs.map(async (friendDoc) => {
-        /*
-          friendDoc.id is the friend's Firebase UID.
-
-          Example:
-
-          users
-            currentUser
-              friends
-                UyTPmhTX7fX9w4V2oEg0zeoAhrB3
-
-          Therefore:
-
-          friendDoc.id =
-          UyTPmhTX7fX9w4V2oEg0zeoAhrB3
-        */
-
         const friendId = friendDoc.id;
 
         console.log(
@@ -399,8 +494,10 @@ export async function getFriends(userId) {
           friendId
         );
 
-        // Fetch actual user document
-        const friend = await getUser(friendId);
+        // Get latest friend user document
+        const friend = await getUser(
+          friendId
+        );
 
         if (!friend) {
           console.warn(
@@ -412,48 +509,78 @@ export async function getFriends(userId) {
         }
 
         /*
-          Return complete friend profile.
+          IMPORTANT:
+          weatherSharing is read directly
+          from the friend's user document.
+        */
+
+        const weatherSharing =
+          friend.weatherSharing === true;
+
+        /*
+          Weather is still returned from Firebase.
+
+          We DO NOT delete weather when sharing
+          is turned off.
+
+          The UI decides whether it can display it.
         */
 
         return {
           id: friend.id,
           friendId,
 
+          // Profile
           name: friend.name || "User",
-          username: friend.username || "",
-          email: friend.email || "",
-          photoURL: friend.photoURL || "",
+          username:
+            friend.username || "",
+          email:
+            friend.email || "",
+          photoURL:
+            friend.photoURL || "",
 
           // Location
-          location: friend.location || null,
-          locationText: friend.locationText || "",
-          latitude: friend.latitude ?? null,
-          longitude: friend.longitude ?? null,
+          location:
+            friend.location || null,
+
+          locationText:
+            friend.locationText || "",
+
+          latitude:
+            friend.latitude ?? null,
+
+          longitude:
+            friend.longitude ?? null,
 
           // Weather
-          weather: friend.weather || null,
+          weather:
+            friend.weather || null,
 
           // Sharing
-          weatherSharing:
-            friend.weatherSharing ?? false,
+          weatherSharing,
 
           locationSharing:
-            friend.locationSharing ?? "off",
+            friend.locationSharing ??
+            "off",
 
-          // Timestamp
+          // Weather timestamp
           weatherUpdatedAt:
-            friend.weatherUpdatedAt || null,
+            friend.weatherUpdatedAt ||
+            null,
 
           // Friendship
-          friendshipId: friendDoc.id,
+          friendshipId:
+            friendDoc.id,
 
           friendshipCreatedAt:
-            friendDoc.data()?.createdAt || null,
+            friendDoc.data()
+              ?.createdAt || null,
         };
       })
     );
 
-    const validFriends = friends.filter(Boolean);
+    const validFriends =
+      friends.filter(Boolean);
 
     console.log(
       "COMPLETE FIREBASE FRIENDS:",
@@ -519,7 +646,9 @@ export async function blockUser(
   blockedUserId
 ) {
   if (!blockerId || !blockedUserId) {
-    throw new Error("Invalid block data");
+    throw new Error(
+      "Invalid block data"
+    );
   }
 
   if (blockerId === blockedUserId) {
@@ -575,7 +704,7 @@ export async function unblockUser(blockId) {
 
 export async function updateWeatherSharing(
   userId,
-  settings
+  enabled
 ) {
   if (!userId) {
     throw new Error(
@@ -589,13 +718,41 @@ export async function updateWeatherSharing(
     userId
   );
 
-  await setDoc(
-    userRef,
+  /*
+    IMPORTANT:
+
+    enabled MUST be a boolean.
+
+    AppContext should call:
+
+    updateWeatherSharing(userId, false)
+
+    NOT:
+
+    updateWeatherSharing(userId, {
+      weatherSharing: false
+    })
+
+    Because:
+
+    Boolean({ weatherSharing: false })
+    === true
+  */
+
+  const sharingEnabled =
+    Boolean(enabled);
+
+  await updateDoc(userRef, {
+    weatherSharing:
+      sharingEnabled,
+  });
+
+  console.log(
+    "WEATHER SHARING UPDATED:",
     {
-      ...settings,
-    },
-    {
-      merge: true,
+      userId,
+      weatherSharing:
+        sharingEnabled,
     }
   );
 
@@ -746,3 +903,4 @@ export async function updateUserWeather(
 
   return true;
 }
+

@@ -1,3 +1,4 @@
+
 import {
   createContext,
   useCallback,
@@ -20,19 +21,127 @@ const AppContext = createContext(null);
 
 let toastId = 0;
 
-export function AppProvider({ children, firebaseUser }) {
-  const [user, setUser] = useState(null);
-  const [friendsList, setFriendsList] = useState([]);
-  const [received, setReceived] = useState([]);
-  const [sent, setSent] = useState([]);
-  const [blocked, setBlocked] = useState(initialBlocked);
-  const [toasts, setToasts] = useState([]);
-  const [locating, setLocating] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+/* =========================================================
+   REVERSE GEOCODING
 
-  /* =====================================================
+   Converts:
+
+   latitude + longitude
+
+   into:
+
+   Kolkata
+   Kalyani
+   Rāmchandrapur
+   etc.
+========================================================= */
+
+async function getPlaceName(latitude, longitude) {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=10&addressdetails=1`,
+      {
+        headers: {
+          Accept: "application/json",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        "Reverse geocoding failed"
+      );
+    }
+
+    const data = await response.json();
+
+    const address = data?.address || {};
+
+    /*
+      Prefer city/town/village/municipality.
+
+      Example result:
+
+      city: Kolkata
+
+      OR
+
+      town: Kalyani
+
+      OR
+
+      village: Rāmchandrapur
+    */
+
+    const placeName =
+      address.city ||
+      address.town ||
+      address.village ||
+      address.municipality ||
+      address.suburb ||
+      address.county ||
+      "";
+
+    const country =
+      address.country_code
+        ?.toUpperCase() || "";
+
+    console.log(
+      "📍 REVERSE GEOCODE RESULT:",
+      {
+        placeName,
+        country,
+        address,
+      }
+    );
+
+    return {
+      placeName,
+      country,
+    };
+  } catch (error) {
+    console.error(
+      "Reverse geocoding error:",
+      error
+    );
+
+    return {
+      placeName: "",
+      country: "",
+    };
+  }
+}
+
+export function AppProvider({
+  children,
+  firebaseUser,
+}) {
+  const [user, setUser] = useState(null);
+
+  const [friendsList, setFriendsList] =
+    useState([]);
+
+  const [received, setReceived] =
+    useState([]);
+
+  const [sent, setSent] =
+    useState([]);
+
+  const [blocked, setBlocked] =
+    useState(initialBlocked);
+
+  const [toasts, setToasts] =
+    useState([]);
+
+  const [locating, setLocating] =
+    useState(false);
+
+  const [darkMode, setDarkMode] =
+    useState(false);
+
+  /* =======================================================
      FIREBASE AUTH USER
-  ===================================================== */
+  ======================================================= */
 
   useEffect(() => {
     if (!firebaseUser) {
@@ -45,9 +154,10 @@ export function AppProvider({ children, firebaseUser }) {
 
     const loadUser = async () => {
       try {
-        const firebaseData = await fs.getUser(
-          firebaseUser.uid
-        );
+        const firebaseData =
+          await fs.getUser(
+            firebaseUser.uid
+          );
 
         setUser({
           ...(firebaseData || {}),
@@ -83,12 +193,10 @@ export function AppProvider({ children, firebaseUser }) {
             "User",
 
           email:
-            firebaseUser.email ||
-            "",
+            firebaseUser.email || "",
 
           photoURL:
-            firebaseUser.photoURL ||
-            "",
+            firebaseUser.photoURL || "",
         });
       }
     };
@@ -96,9 +204,9 @@ export function AppProvider({ children, firebaseUser }) {
     loadUser();
   }, [firebaseUser]);
 
-  /* =====================================================
+  /* =======================================================
      TOASTS
-  ===================================================== */
+  ======================================================= */
 
   const pushToast = useCallback(
     (message, tone = "success") => {
@@ -124,72 +232,73 @@ export function AppProvider({ children, firebaseUser }) {
     []
   );
 
-  const dismissToast = useCallback((id) => {
-    setToasts((current) =>
-      current.filter(
-        (toast) => toast.id !== id
-      )
-    );
-  }, []);
+  const dismissToast = useCallback(
+    (id) => {
+      setToasts((current) =>
+        current.filter(
+          (toast) => toast.id !== id
+        )
+      );
+    },
+    []
+  );
 
-  /* =====================================================
+  /* =======================================================
      LOAD FRIENDS
-     
-     IMPORTANT:
-     Always get the friend's COMPLETE user document
-     from Firestore.
-  ===================================================== */
+  ======================================================= */
 
- const refreshFriends = useCallback(
-  async () => {
-    if (!user?.id) {
-      return [];
-    }
+  const refreshFriends = useCallback(
+    async () => {
+      if (!user?.id) {
+        return [];
+      }
 
-    try {
-      console.log("🔄 Refreshing friends...");
-
-      const friends =
-        await fs.getFriends(user.id);
-
-      const uniqueFriends =
-        Array.from(
-          new Map(
-            friends.map((friend) => [
-              friend.id,
-              friend,
-            ])
-          ).values()
+      try {
+        console.log(
+          "🔄 Refreshing friends..."
         );
 
-      setFriendsList(uniqueFriends);
+        const friends =
+          await fs.getFriends(user.id);
 
-      console.log(
-        "✅ FRIENDS REFRESHED:",
-        uniqueFriends
-      );
+        const uniqueFriends =
+          Array.from(
+            new Map(
+              friends.map((friend) => [
+                friend.id,
+                friend,
+              ])
+            ).values()
+          );
 
-      return uniqueFriends;
-    } catch (error) {
-      console.error(
-        "❌ Failed to refresh friends:",
-        error
-      );
+        setFriendsList(uniqueFriends);
 
-      pushToast(
-        "Failed to refresh friends",
-        "error"
-      );
+        console.log(
+          "✅ FRIENDS REFRESHED:",
+          uniqueFriends
+        );
 
-      return [];
-    }
-  },
-  [user?.id, pushToast]
-);
+        return uniqueFriends;
+      } catch (error) {
+        console.error(
+          "❌ Failed to refresh friends:",
+          error
+        );
 
-  /* =====================================================
+        pushToast(
+          "Failed to refresh friends",
+          "error"
+        );
+
+        return [];
+      }
+    },
+    [user?.id, pushToast]
+  );
+
+  /* =======================================================
      LOCATION + WEATHER
-  ===================================================== */
+  ======================================================= */
 
   const detectLocation = useCallback(
     async () => {
@@ -200,9 +309,9 @@ export function AppProvider({ children, firebaseUser }) {
       setLocating(true);
 
       try {
-        /* ---------------------------------------------
-           1. Get GPS
-        --------------------------------------------- */
+        /* ---------------------------------------------------
+           1. GET GPS
+        --------------------------------------------------- */
 
         const {
           latitude,
@@ -219,27 +328,29 @@ export function AppProvider({ children, firebaseUser }) {
           longitude
         );
 
-        console.log(
-          "📍 EXACT COORDINATES:",
-          {
+        /* ---------------------------------------------------
+           2. GET PLACE NAME
+        --------------------------------------------------- */
+
+        const place =
+          await getPlaceName(
             latitude,
-            longitude,
-          }
+            longitude
+          );
+
+        console.log(
+          "📍 PLACE NAME:",
+          place.placeName
         );
 
-        /* ---------------------------------------------
-           2. Save location
-        --------------------------------------------- */
-
-        await fs.updateUserLocation(
-          user.id,
-          latitude,
-          longitude
+        console.log(
+          "🌍 COUNTRY:",
+          place.country
         );
 
-        /* ---------------------------------------------
-           3. Get weather
-        --------------------------------------------- */
+        /* ---------------------------------------------------
+           3. GET WEATHER
+        --------------------------------------------------- */
 
         const weather =
           await getCurrentWeather(
@@ -278,31 +389,92 @@ export function AppProvider({ children, firebaseUser }) {
           weather?.rain
         );
 
-        /* ---------------------------------------------
-           4. Save weather
-        --------------------------------------------- */
+        /* ---------------------------------------------------
+           4. DETERMINE FINAL LOCATION NAME
+
+           Priority:
+
+           1. Weather API locationName
+           2. Reverse geocoding placeName
+           3. Existing user location name
+        --------------------------------------------------- */
+
+        const finalLocationName =
+          weather?.locationName ||
+          place.placeName ||
+          user?.location?.city ||
+          "";
+
+        const finalCountry =
+          weather?.country ||
+          place.country ||
+          "";
+
+        console.log(
+          "📍 FINAL LOCATION NAME:",
+          finalLocationName
+        );
+
+        /* ---------------------------------------------------
+           5. SAVE LOCATION TO FIREBASE
+        --------------------------------------------------- */
+
+        await fs.updateUserLocation(
+          user.id,
+          latitude,
+          longitude,
+          finalLocationName,
+          finalCountry
+        );
+
+        /* ---------------------------------------------------
+           6. SAVE WEATHER TO FIREBASE
+
+           Make sure weather contains locationName.
+        --------------------------------------------------- */
+
+        const weatherToSave = {
+          ...weather,
+
+          temperature:
+            weather?.temperature ??
+            weather?.temp ??
+            null,
+
+          locationName:
+            finalLocationName,
+
+          country:
+            finalCountry,
+        };
 
         await fs.updateUserWeather(
           user.id,
-          weather
+          weatherToSave
         );
 
-        /* ---------------------------------------------
-           5. Location text
-        --------------------------------------------- */
+        /* ---------------------------------------------------
+           7. LOCATION TEXT
+
+           Example:
+
+           Kolkata, IN
+
+           Rāmchandrapur, IN
+        --------------------------------------------------- */
 
         const locationText =
-          weather?.locationName
-            ? `${weather.locationName}${
-                weather.country
-                  ? `, ${weather.country}`
+          finalLocationName
+            ? `${finalLocationName}${
+                finalCountry
+                  ? `, ${finalCountry}`
                   : ""
               }`
             : "";
 
-        /* ---------------------------------------------
-           6. Update local user
-        --------------------------------------------- */
+        /* ---------------------------------------------------
+           8. UPDATE LOCAL USER
+        --------------------------------------------------- */
 
         setUser((currentUser) => {
           if (!currentUser) {
@@ -318,39 +490,41 @@ export function AppProvider({ children, firebaseUser }) {
             longitude,
 
             location: {
-              city:
-                weather?.locationName ||
-                currentUser?.location?.city ||
-                "",
+              city: finalLocationName,
+
+              name: finalLocationName,
 
               lat: latitude,
               lng: longitude,
             },
 
-            weather: {
-              ...weather,
-
-              temperature:
-                weather?.temperature ??
-                weather?.temp ??
-                null,
-            },
-
             locationText,
+
+            weather: weatherToSave,
+
+            weatherSharing:
+              currentUser.weatherSharing ??
+              false,
+
+            locationSharing:
+              currentUser.locationSharing ??
+              "off",
           };
         });
 
-        /* ---------------------------------------------
-           7. Refresh friends
+        /* ---------------------------------------------------
+           9. REFRESH FRIENDS
 
-           Friends' weather comes from THEIR Firebase
-           user documents.
-        --------------------------------------------- */
+           This makes sure friend's latest Firebase
+           weatherSharing/location/weather is loaded.
+        --------------------------------------------------- */
 
         await refreshFriends();
 
         pushToast(
-          "Location & weather updated"
+          finalLocationName
+            ? `Location updated: ${finalLocationName}`
+            : "Location & weather updated"
         );
       } catch (error) {
         console.error(
@@ -369,14 +543,15 @@ export function AppProvider({ children, firebaseUser }) {
     },
     [
       user?.id,
+      user?.location?.city,
       pushToast,
       refreshFriends,
     ]
   );
 
-  /* =====================================================
+  /* =======================================================
      AUTOMATIC LOCATION DETECTION
-  ===================================================== */
+  ======================================================= */
 
   useEffect(() => {
     if (!user?.id) {
@@ -386,9 +561,9 @@ export function AppProvider({ children, firebaseUser }) {
     detectLocation();
   }, [user?.id]);
 
-  /* =====================================================
+  /* =======================================================
      LOAD FIREBASE DATA
-  ===================================================== */
+  ======================================================= */
 
   useEffect(() => {
     if (!user?.id) {
@@ -413,10 +588,6 @@ export function AppProvider({ children, firebaseUser }) {
           ),
         ]);
 
-        /* ---------------------------------------------
-           Remove duplicate friends
-        --------------------------------------------- */
-
         const uniqueFriends =
           Array.from(
             new Map(
@@ -427,17 +598,13 @@ export function AppProvider({ children, firebaseUser }) {
             ).values()
           );
 
-        setFriendsList(
-          uniqueFriends
-        );
+        setFriendsList(uniqueFriends);
 
         setReceived(
           receivedRequests
         );
 
-        setSent(
-          sentRequests
-        );
+        setSent(sentRequests);
 
         console.log(
           "👥 FIREBASE FRIENDS:",
@@ -464,9 +631,9 @@ export function AppProvider({ children, firebaseUser }) {
     loadFirebaseData();
   }, [user?.id]);
 
-  /* =====================================================
+  /* =======================================================
      SEND FRIEND REQUEST
-  ===================================================== */
+  ======================================================= */
 
   const sendRequest = useCallback(
     async (person) => {
@@ -488,30 +655,23 @@ export function AppProvider({ children, firebaseUser }) {
           requestId:
             result.requestId,
 
-          senderId:
-            user.id,
+          senderId: user.id,
 
-          receiverId:
-            person.id,
+          receiverId: person.id,
 
           name:
-            person.name ||
-            "User",
+            person.name || "User",
 
           username:
-            person.username ||
-            "",
+            person.username || "",
 
           location:
-            person.location ||
-            null,
+            person.location || null,
 
           photoURL:
-            person.photoURL ||
-            "",
+            person.photoURL || "",
 
-          status:
-            "pending",
+          status: "pending",
         };
 
         setSent((current) => [
@@ -535,214 +695,168 @@ export function AppProvider({ children, firebaseUser }) {
         );
       }
     },
-    [
-      user?.id,
-      pushToast,
-    ]
+    [user?.id, pushToast]
   );
 
-  /* =====================================================
+  /* =======================================================
      CANCEL FRIEND REQUEST
-  ===================================================== */
+  ======================================================= */
 
-  const cancelRequest =
-    useCallback(
-      async (requestId) => {
-        if (!requestId) {
-          return;
-        }
+  const cancelRequest = useCallback(
+    async (requestId) => {
+      if (!requestId) {
+        return;
+      }
 
-        try {
-          await fs.cancelFriendRequest(
-            requestId
-          );
+      try {
+        await fs.cancelFriendRequest(
+          requestId
+        );
 
-          setSent((current) =>
-            current.filter(
-              (request) =>
-                request.requestId !==
-                requestId
-            )
-          );
+        setSent((current) =>
+          current.filter(
+            (request) =>
+              request.requestId !==
+              requestId
+          )
+        );
 
-          pushToast(
-            "Request cancelled"
-          );
-        } catch (error) {
-          console.error(
-            "Cancel request error:",
-            error
-          );
+        pushToast(
+          "Request cancelled"
+        );
+      } catch (error) {
+        console.error(
+          "Cancel request error:",
+          error
+        );
 
-          pushToast(
-            error?.message ||
-              "Failed to cancel request",
-            "error"
-          );
-        }
-      },
-      [pushToast]
-    );
+        pushToast(
+          error?.message ||
+            "Failed to cancel request",
+          "error"
+        );
+      }
+    },
+    [pushToast]
+  );
 
-  /* =====================================================
+  /* =======================================================
      ACCEPT FRIEND REQUEST
-     
-     THIS IS THE IMPORTANT PART
-  ===================================================== */
+  ======================================================= */
 
-  const acceptRequest =
-    useCallback(
-      async (request) => {
-        if (
-          !user?.id ||
-          !request?.senderId ||
-          !request?.requestId
-        ) {
-          console.error(
-            "Invalid request:",
-            request
+  const acceptRequest = useCallback(
+    async (request) => {
+      if (
+        !user?.id ||
+        !request?.senderId ||
+        !request?.requestId
+      ) {
+        console.error(
+          "Invalid request:",
+          request
+        );
+
+        return;
+      }
+
+      try {
+        console.log(
+          "🤝 ACCEPTING FRIEND:",
+          request
+        );
+
+        const result =
+          await fs.acceptFriendRequest(
+            request.requestId,
+            user.id,
+            request.senderId
           );
 
-          return;
-        }
+        console.log(
+          "✅ FRIENDSHIP CREATED:",
+          result
+        );
 
-        try {
-          console.log(
-            "🤝 ACCEPTING FRIEND:",
-            request
-          );
+        let friend =
+          result?.friend;
 
-          /* -------------------------------------------
-             1. Create friendship in Firebase
-          ------------------------------------------- */
-
-          const result =
-            await fs.acceptFriendRequest(
-              request.requestId,
-              user.id,
+        if (!friend) {
+          friend =
+            await fs.getUser(
               request.senderId
             );
+        }
 
-          console.log(
-            "✅ FRIENDSHIP CREATED:",
-            result
+        if (!friend) {
+          throw new Error(
+            "Friend user profile could not be found"
           );
+        }
 
-          /* -------------------------------------------
-             2. Get COMPLETE friend profile
+        const completeFriend = {
+          id: friend.id,
 
-             This comes from:
+          friendId: friend.id,
 
-             users/{request.senderId}
+          name:
+            friend.name ||
+            request.name ||
+            "User",
 
-             NOT from the request itself.
-          ------------------------------------------- */
+          username:
+            friend.username ||
+            request.username ||
+            "",
 
-          let friend =
-            result?.friend;
+          email:
+            friend.email || "",
 
-          if (!friend) {
-            friend =
-              await fs.getUser(
-                request.senderId
-              );
-          }
+          photoURL:
+            friend.photoURL ||
+            request.photoURL ||
+            "",
 
-          if (!friend) {
-            throw new Error(
-              "Friend user profile could not be found"
-            );
-          }
+          location:
+            friend.location ||
+            request.location ||
+            null,
 
-          /* -------------------------------------------
-             3. Build complete friend object
-          ------------------------------------------- */
+          locationText:
+            friend.locationText || "",
 
-          const completeFriend = {
-            id: friend.id,
+          latitude:
+            friend.latitude ??
+            friend.location?.lat ??
+            null,
 
-            friendId: friend.id,
+          longitude:
+            friend.longitude ??
+            friend.location?.lng ??
+            null,
 
-            name:
-              friend.name ||
-              request.name ||
-              "User",
+          weather:
+            friend.weather || null,
 
-            username:
-              friend.username ||
-              request.username ||
-              "",
+          weatherSharing:
+            friend.weatherSharing ??
+            false,
 
-            email:
-              friend.email ||
-              "",
+          locationSharing:
+            friend.locationSharing ||
+            "none",
 
-            photoURL:
-              friend.photoURL ||
-              request.photoURL ||
-              "",
+          weatherUpdatedAt:
+            friend.weatherUpdatedAt ||
+            null,
+        };
 
-            location:
-              friend.location ||
-              request.location ||
-              null,
+        console.log(
+          "👤 NEW FRIEND:",
+          completeFriend
+        );
 
-            locationText:
-              friend.locationText ||
-              "",
-
-            latitude:
-              friend.latitude ??
-              friend.location?.lat ??
-              null,
-
-            longitude:
-              friend.longitude ??
-              friend.location?.lng ??
-              null,
-
-            weather:
-              friend.weather ||
-              null,
-
-            weatherSharing:
-              friend.weatherSharing ??
-              false,
-
-            locationSharing:
-              friend.locationSharing ||
-              "none",
-
-            weatherUpdatedAt:
-              friend.weatherUpdatedAt ||
-              null,
-          };
-
-          console.log(
-            "👤 NEW FRIEND:",
-            completeFriend
-          );
-
-          console.log(
-            "👤 FRIEND NAME:",
-            completeFriend.name
-          );
-
-          console.log(
-            "📍 FRIEND LOCATION:",
-            completeFriend.location
-          );
-
-          console.log(
-            "🌤️ FRIEND WEATHER:",
-            completeFriend.weather
-          );
-
-          /* -------------------------------------------
-             4. Immediately add friend to UI
-          ------------------------------------------- */
-
-          setFriendsList((current) => {
+        setFriendsList(
+          (current) => {
             const exists =
               current.some(
                 (existingFriend) =>
@@ -764,237 +878,220 @@ export function AppProvider({ children, firebaseUser }) {
               ...current,
               completeFriend,
             ];
-          });
+          }
+        );
 
-          /* -------------------------------------------
-             5. Remove accepted request
-          ------------------------------------------- */
-
-          setReceived((current) =>
+        setReceived(
+          (current) =>
             current.filter(
               (receivedRequest) =>
                 receivedRequest.requestId !==
                 request.requestId
             )
-          );
+        );
 
-          /* -------------------------------------------
-             6. Refresh from Firestore
+        await refreshFriends();
 
-             This makes sure the UI and database
-             are synchronized.
-          ------------------------------------------- */
+        pushToast(
+          `${completeFriend.name} is now your friend`
+        );
+      } catch (error) {
+        console.error(
+          "Accept friend request error:",
+          error
+        );
 
-          await refreshFriends();
+        pushToast(
+          error?.message ||
+            "Failed to accept request",
+          "error"
+        );
+      }
+    },
+    [
+      user?.id,
+      pushToast,
+      refreshFriends,
+    ]
+  );
 
-          pushToast(
-            `${completeFriend.name} is now your friend`
-          );
-        } catch (error) {
-          console.error(
-            "Accept friend request error:",
-            error
-          );
-
-          pushToast(
-            error?.message ||
-              "Failed to accept request",
-            "error"
-          );
-        }
-      },
-      [
-        user?.id,
-        pushToast,
-        refreshFriends,
-      ]
-    );
-
-  /* =====================================================
+  /* =======================================================
      REJECT FRIEND REQUEST
-  ===================================================== */
+  ======================================================= */
 
-  const rejectRequest =
-    useCallback(
-      async (requestId) => {
-        if (!requestId) {
-          return;
-        }
+  const rejectRequest = useCallback(
+    async (requestId) => {
+      if (!requestId) {
+        return;
+      }
 
-        try {
-          await fs.rejectFriendRequest(
-            requestId
-          );
+      try {
+        await fs.rejectFriendRequest(
+          requestId
+        );
 
-          setReceived((current) =>
-            current.filter(
-              (request) =>
-                request.requestId !==
-                requestId
-            )
-          );
+        setReceived((current) =>
+          current.filter(
+            (request) =>
+              request.requestId !==
+              requestId
+          )
+        );
 
-          pushToast(
-            "Request rejected"
-          );
-        } catch (error) {
-          console.error(
-            "Reject request error:",
-            error
-          );
+        pushToast(
+          "Request rejected"
+        );
+      } catch (error) {
+        console.error(
+          "Reject request error:",
+          error
+        );
 
-          pushToast(
-            error?.message ||
-              "Failed to reject request",
-            "error"
-          );
-        }
-      },
-      [pushToast]
-    );
+        pushToast(
+          error?.message ||
+            "Failed to reject request",
+          "error"
+        );
+      }
+    },
+    [pushToast]
+  );
 
-  /* =====================================================
+  /* =======================================================
      REMOVE FRIEND
-  ===================================================== */
+  ======================================================= */
 
-  const removeFriend =
-    useCallback(
-      async (friendId) => {
-        if (
-          !user?.id ||
-          !friendId
-        ) {
-          return;
-        }
+  const removeFriend = useCallback(
+    async (friendId) => {
+      if (
+        !user?.id ||
+        !friendId
+      ) {
+        return;
+      }
 
-        try {
-          await fs.removeFriend(
-            user.id,
-            friendId
-          );
+      try {
+        await fs.removeFriend(
+          user.id,
+          friendId
+        );
 
-          setFriendsList((current) =>
-            current.filter(
-              (friend) =>
-                friend.id !==
-                friendId
-            )
-          );
+        setFriendsList((current) =>
+          current.filter(
+            (friend) =>
+              friend.id !== friendId
+          )
+        );
 
-          pushToast(
-            "Friend removed"
-          );
-        } catch (error) {
-          console.error(
-            "Remove friend error:",
-            error
-          );
+        pushToast(
+          "Friend removed"
+        );
+      } catch (error) {
+        console.error(
+          "Remove friend error:",
+          error
+        );
 
-          pushToast(
-            error?.message ||
-              "Failed to remove friend",
-            "error"
-          );
-        }
-      },
-      [
-        user?.id,
-        pushToast,
-      ]
-    );
+        pushToast(
+          error?.message ||
+            "Failed to remove friend",
+          "error"
+        );
+      }
+    },
+    [user?.id, pushToast]
+  );
 
-  /* =====================================================
+  /* =======================================================
      BLOCK USER
-  ===================================================== */
+  ======================================================= */
 
-  const blockUserById =
-    useCallback(
-      async (person) => {
-        if (
-          !user?.id ||
-          !person?.id
-        ) {
-          return;
-        }
+  const blockUserById = useCallback(
+    async (person) => {
+      if (
+        !user?.id ||
+        !person?.id
+      ) {
+        return;
+      }
 
-        try {
-          const result =
-            await fs.blockUser(
-              user.id,
-              person.id
-            );
-
-          setFriendsList((current) =>
-            current.filter(
-              (friend) =>
-                friend.id !==
-                person.id
-            )
+      try {
+        const result =
+          await fs.blockUser(
+            user.id,
+            person.id
           );
 
-          setReceived((current) =>
+        setFriendsList(
+          (current) =>
+            current.filter(
+              (friend) =>
+                friend.id !== person.id
+            )
+        );
+
+        setReceived(
+          (current) =>
             current.filter(
               (request) =>
                 request.senderId !==
                 person.id
             )
-          );
+        );
 
-          setSent((current) =>
+        setSent(
+          (current) =>
             current.filter(
               (request) =>
                 request.receiverId !==
                 person.id
             )
-          );
+        );
 
-          setBlocked((current) => [
-            ...current,
-            {
-              id: person.id,
+        setBlocked((current) => [
+          ...current,
 
-              name:
-                person.name,
+          {
+            id: person.id,
 
-              username:
-                person.username,
+            name: person.name,
 
-              location:
-                person.location,
+            username:
+              person.username,
 
-              photoURL:
-                person.photoURL,
+            location:
+              person.location,
 
-              blockId:
-                result?.blockId,
-            },
-          ]);
+            photoURL:
+              person.photoURL,
 
-          pushToast(
-            "User blocked"
-          );
-        } catch (error) {
-          console.error(
-            "Block user error:",
-            error
-          );
+            blockId:
+              result?.blockId,
+          },
+        ]);
 
-          pushToast(
-            error?.message ||
-              "Failed to block user",
-            "error"
-          );
-        }
-      },
-      [
-        user?.id,
-        pushToast,
-      ]
-    );
+        pushToast(
+          "User blocked"
+        );
+      } catch (error) {
+        console.error(
+          "Block user error:",
+          error
+        );
 
-  /* =====================================================
+        pushToast(
+          error?.message ||
+            "Failed to block user",
+          "error"
+        );
+      }
+    },
+    [user?.id, pushToast]
+  );
+
+  /* =======================================================
      UNBLOCK USER
-  ===================================================== */
+  ======================================================= */
 
   const unblockUserById =
     useCallback(
@@ -1039,9 +1136,9 @@ export function AppProvider({ children, firebaseUser }) {
       [pushToast]
     );
 
-  /* =====================================================
+  /* =======================================================
      WEATHER SHARING
-  ===================================================== */
+  ======================================================= */
 
   const updateWeatherSharing =
     useCallback(
@@ -1050,24 +1147,38 @@ export function AppProvider({ children, firebaseUser }) {
           return;
         }
 
+        const sharingEnabled =
+          Boolean(enabled);
+
         try {
           await fs.updateWeatherSharing(
             user.id,
-            {
-              weatherSharing:
-                enabled,
-            }
+            sharingEnabled
           );
 
-          setUser((current) => ({
-            ...current,
+          setUser((current) => {
+            if (!current) {
+              return current;
+            }
 
-            weatherSharing:
-              enabled,
-          }));
+            return {
+              ...current,
+              weatherSharing:
+                sharingEnabled,
+            };
+          });
+
+          /*
+            Refresh friend list.
+
+            This is useful when the same user/session
+            needs the latest Firebase state.
+          */
 
           pushToast(
-            "Weather sharing updated"
+            sharingEnabled
+              ? "Weather sharing turned ON"
+              : "Weather sharing turned OFF"
           );
         } catch (error) {
           console.error(
@@ -1082,15 +1193,12 @@ export function AppProvider({ children, firebaseUser }) {
           );
         }
       },
-      [
-        user?.id,
-        pushToast,
-      ]
+      [user?.id, pushToast]
     );
 
-  /* =====================================================
+  /* =======================================================
      LOCATION SHARING
-  ===================================================== */
+  ======================================================= */
 
   const updateLocationSharing =
     useCallback(
@@ -1107,9 +1215,7 @@ export function AppProvider({ children, firebaseUser }) {
 
           setUser((current) => ({
             ...current,
-
-            locationSharing:
-              mode,
+            locationSharing: mode,
           }));
 
           pushToast(
@@ -1128,146 +1234,150 @@ export function AppProvider({ children, firebaseUser }) {
           );
         }
       },
-      [
-        user?.id,
-        pushToast,
-      ]
+      [user?.id, pushToast]
     );
 
-  /* =====================================================
+  /* =======================================================
      SEARCH USERS
-  ===================================================== */
+  ======================================================= */
 
-  const searchUsers =
-    useCallback(
-      async (term) => {
-        const text =
-          term?.trim().toLowerCase();
+  const searchUsers = useCallback(
+    async (term) => {
+      const text =
+        term?.trim().toLowerCase();
 
-        if (!text) {
-          return [];
-        }
+      if (!text) {
+        return [];
+      }
 
-        try {
-          const users =
-            await fs.searchUsers(
-              text
-            );
+      try {
+        const users =
+          await fs.searchUsers(text);
 
-          const friendIds =
-            new Set(
-              friendsList.map(
-                (friend) =>
-                  friend.id
-              )
-            );
-
-          const blockedIds =
-            new Set(
-              blocked.map(
-                (person) =>
-                  person.id
-              )
-            );
-
-          const pendingIds =
-            new Set(
-              sent.map(
-                (request) =>
-                  request.receiverId
-              )
-            );
-
-          return users
-            .filter(
-              (person) =>
-                person.id !==
-                  user?.id &&
-                !blockedIds.has(
-                  person.id
-                )
+        const friendIds =
+          new Set(
+            friendsList.map(
+              (friend) => friend.id
             )
-            .map((person) => ({
-              ...person,
-
-              isFriend:
-                friendIds.has(
-                  person.id
-                ),
-
-              isPending:
-                pendingIds.has(
-                  person.id
-                ),
-            }));
-        } catch (error) {
-          console.error(
-            "Search users error:",
-            error
           );
 
-          return [];
-        }
-      },
-      [
-        friendsList,
-        blocked,
-        sent,
-        user?.id,
-      ]
-    );
+        const blockedIds =
+          new Set(
+            blocked.map(
+              (person) => person.id
+            )
+          );
 
-  /* =====================================================
+        const pendingIds =
+          new Set(
+            sent.map(
+              (request) =>
+                request.receiverId
+            )
+          );
+
+        return users
+          .filter(
+            (person) =>
+              person.id !== user?.id &&
+              !blockedIds.has(
+                person.id
+              )
+          )
+          .map((person) => ({
+            ...person,
+
+            isFriend:
+              friendIds.has(
+                person.id
+              ),
+
+            isPending:
+              pendingIds.has(
+                person.id
+              ),
+          }));
+      } catch (error) {
+        console.error(
+          "Search users error:",
+          error
+        );
+
+        return [];
+      }
+    },
+    [
+      friendsList,
+      blocked,
+      sent,
+      user?.id,
+    ]
+  );
+
+  /* =======================================================
      DARK MODE
-  ===================================================== */
+  ======================================================= */
 
   const toggleDarkMode =
     useCallback(() => {
       setDarkMode(
-        (previous) =>
-          !previous
+        (previous) => !previous
       );
     }, []);
 
-  /* =====================================================
+  /* =======================================================
      CONTEXT VALUE
-  ===================================================== */
+  ======================================================= */
 
   const value = {
-  user,
-  friendsList,
-  received,
-  sent,
-  blocked,
-  toasts,
-  locating,
-  alerts: weatherAlerts,
+    user,
 
-  darkMode,
+    friendsList,
 
-  toggleDarkMode,
+    received,
 
-  pushToast,
-  dismissToast,
+    sent,
 
-  detectLocation,
+    blocked,
 
-  refreshFriends,
+    toasts,
 
-  sendRequest,
-  cancelRequest,
-  acceptRequest,
-  rejectRequest,
-  removeFriend,
+    locating,
 
-  blockUserById,
-  unblockUserById,
+    alerts: weatherAlerts,
 
-  updateWeatherSharing,
-  updateLocationSharing,
+    darkMode,
 
-  searchUsers,
-};
+    toggleDarkMode,
+
+    pushToast,
+
+    dismissToast,
+
+    detectLocation,
+
+    refreshFriends,
+
+    sendRequest,
+
+    cancelRequest,
+
+    acceptRequest,
+
+    rejectRequest,
+
+    removeFriend,
+
+    blockUserById,
+
+    unblockUserById,
+
+    updateWeatherSharing,
+
+    updateLocationSharing,
+
+    searchUsers,
+  };
 
   return (
     <AppContext.Provider value={value}>
@@ -1292,3 +1402,4 @@ export function useApp() {
 
   return context;
 }
+
