@@ -1,11 +1,13 @@
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
+
 import { Send, Bot, User } from "lucide-react";
+
 import { useApp } from "../context/AppContext";
 import { sendChatMessage } from "../services/chatService";
 
 export default function Chatbot() {
     const { user } = useApp();
-    console.log("🤖 CHATBOT USER:", user);
 
     const [messages, setMessages] = useState([
         {
@@ -21,35 +23,53 @@ export default function Chatbot() {
     async function handleSend() {
         const text = input.trim();
 
-        if (!text || loading) return;
+        if (!text || loading) {
+            return;
+        }
 
         const userMessage = {
             id: Date.now(),
             role: "user",
-            text,
+            text: text,
         };
 
-        setMessages((previous) => [...previous, userMessage]);
+        setMessages((previous) => [
+            ...previous,
+            userMessage,
+        ]);
+
         setInput("");
         setLoading(true);
 
-        try {
-            const data = await sendChatMessage(text, {
-                latitude:
-                    user?.latitude ??
-                    user?.location?.lat ??
-                    null,
+        const currentLocation = {
+            latitude:
+                user?.location?.lat ??
+                user?.latitude ??
+                null,
 
-                longitude:
-                    user?.longitude ??
-                    user?.location?.lng ??
-                    null,
-            });
+            longitude:
+                user?.location?.lng ??
+                user?.longitude ??
+                null,
+        };
+
+        console.log(
+            "📤 CHATBOT SENDING LOCATION:",
+            currentLocation
+        );
+
+        try {
+            const data = await sendChatMessage(
+                text,
+                currentLocation
+            );
 
             const assistantMessage = {
                 id: Date.now() + 1,
                 role: "assistant",
-                text: data.reply,
+                text:
+                    data?.reply ||
+                    "Sorry, I couldn't generate a response.",
             };
 
             setMessages((previous) => [
@@ -62,7 +82,8 @@ export default function Chatbot() {
             const errorMessage = {
                 id: Date.now() + 1,
                 role: "assistant",
-                text: "Sorry, I couldn't connect to the AI right now.",
+                text:
+                    "Sorry, I couldn't connect to the AI right now.",
             };
 
             setMessages((previous) => [
@@ -82,6 +103,8 @@ export default function Chatbot() {
 
     return (
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 pb-28 md:pb-10">
+
+            {/* Header */}
             <div className="mb-5">
                 <h1 className="text-xl md:text-2xl font-display font-extrabold text-ink-900">
                     WeatherGPT
@@ -92,8 +115,12 @@ export default function Chatbot() {
                 </p>
             </div>
 
+            {/* Chat Container */}
             <div className="bg-white rounded-xl3 shadow-card overflow-hidden">
+
+                {/* Messages */}
                 <div className="h-[500px] overflow-y-auto p-4 sm:p-6 space-y-4">
+
                     {messages.map((message) => {
                         const isUser =
                             message.role === "user";
@@ -107,12 +134,15 @@ export default function Chatbot() {
                                         : "justify-start"
                                 }`}
                             >
+
+                                {/* Bot Avatar */}
                                 {!isUser && (
                                     <div className="w-9 h-9 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center shrink-0">
                                         <Bot size={18} />
                                     </div>
                                 )}
 
+                                {/* Message Bubble */}
                                 <div
                                     className={`max-w-[75%] px-4 py-3 rounded-2xl text-sm ${
                                         isUser
@@ -120,20 +150,126 @@ export default function Chatbot() {
                                             : "bg-sky-50 text-ink-700 rounded-bl-md"
                                     }`}
                                 >
-                                    {message.text}
+                                    {isUser ? (
+                                        message.text
+                                    ) : (
+                                        <ReactMarkdown
+                                            components={{
+                                                /* Paragraphs */
+                                                p: ({ children }) => (
+                                                    <p className="mb-2 last:mb-0 leading-relaxed">
+                                                        {children}
+                                                    </p>
+                                                ),
+
+                                                /* Bold */
+                                                strong: ({ children }) => (
+                                                    <strong className="font-semibold text-ink-900">
+                                                        {children}
+                                                    </strong>
+                                                ),
+
+                                                /* Italic */
+                                                em: ({ children }) => (
+                                                    <em>
+                                                        {children}
+                                                    </em>
+                                                ),
+
+                                                /* Unordered Lists */
+                                                ul: ({ children }) => (
+                                                    <ul className="list-disc pl-5 mb-2 space-y-1">
+                                                        {children}
+                                                    </ul>
+                                                ),
+
+                                                /* Ordered Lists */
+                                                ol: ({ children }) => (
+                                                    <ol className="list-decimal pl-5 mb-2 space-y-1">
+                                                        {children}
+                                                    </ol>
+                                                ),
+
+                                                /* List Items */
+                                                li: ({ children }) => (
+                                                    <li className="leading-relaxed">
+                                                        {children}
+                                                    </li>
+                                                ),
+
+                                                /* Heading 1 */
+                                                h1: ({ children }) => (
+                                                    <h1 className="text-lg font-bold text-ink-900 mb-2">
+                                                        {children}
+                                                    </h1>
+                                                ),
+
+                                                /* Heading 2 */
+                                                h2: ({ children }) => (
+                                                    <h2 className="text-base font-bold text-ink-900 mb-2">
+                                                        {children}
+                                                    </h2>
+                                                ),
+
+                                                /* Heading 3 */
+                                                h3: ({ children }) => (
+                                                    <h3 className="font-semibold text-ink-900 mb-1">
+                                                        {children}
+                                                    </h3>
+                                                ),
+
+                                                /* Inline Code */
+                                                code: ({ children }) => (
+                                                    <code className="bg-white/70 px-1.5 py-0.5 rounded text-xs font-mono">
+                                                        {children}
+                                                    </code>
+                                                ),
+
+                                                /* Blockquotes */
+                                                blockquote: ({ children }) => (
+                                                    <blockquote className="border-l-2 border-sky-300 pl-3 my-2 italic text-ink-500">
+                                                        {children}
+                                                    </blockquote>
+                                                ),
+
+                                                /* Horizontal Rule */
+                                                hr: () => (
+                                                    <hr className="my-3 border-sky-100" />
+                                                ),
+
+                                                /* Links */
+                                                a: ({ children, href }) => (
+                                                    <a
+                                                        href={href}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-sky-600 underline hover:text-sky-700"
+                                                    >
+                                                        {children}
+                                                    </a>
+                                                ),
+                                            }}
+                                        >
+                                            {message.text}
+                                        </ReactMarkdown>
+                                    )}
                                 </div>
 
+                                {/* User Avatar */}
                                 {isUser && (
                                     <div className="w-9 h-9 rounded-full bg-ink-100 text-ink-600 flex items-center justify-center shrink-0">
                                         <User size={18} />
                                     </div>
                                 )}
+
                             </div>
                         );
                     })}
 
+                    {/* Loading Message */}
                     {loading && (
                         <div className="flex gap-3 justify-start">
+
                             <div className="w-9 h-9 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center shrink-0">
                                 <Bot size={18} />
                             </div>
@@ -141,12 +277,17 @@ export default function Chatbot() {
                             <div className="bg-sky-50 text-ink-400 px-4 py-3 rounded-2xl rounded-bl-md text-sm">
                                 Thinking...
                             </div>
+
                         </div>
                     )}
+
                 </div>
 
+                {/* Input */}
                 <div className="border-t border-ink-100 p-3 sm:p-4">
+
                     <div className="flex items-center gap-2">
+
                         <input
                             type="text"
                             value={input}
@@ -169,9 +310,13 @@ export default function Chatbot() {
                         >
                             <Send size={18} />
                         </button>
+
                     </div>
+
                 </div>
+
             </div>
+
         </div>
     );
 }
