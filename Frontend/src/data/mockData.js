@@ -177,9 +177,9 @@ export const searchResultsPool = [
 export const blockedUsers = [
   {
     id: "u_abhisekh",
-    name: "Abhisekh Verma",
-    username: "avisekh1233",
-    location: "Naihati",
+    name: "Rehman Dakait",
+    username: "rehmanbhai",
+    location: "Lyari",
     photoURL: null,
   },
 ];
