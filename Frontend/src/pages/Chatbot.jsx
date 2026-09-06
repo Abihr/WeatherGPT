@@ -58,9 +58,18 @@ export default function Chatbot() {
         );
 
         try {
+            // Build conversation history from previous messages
+            const conversationHistory = messages.map(
+                (message) => ({
+                    role: message.role,
+                    content: message.text,
+                })
+            );
+
             const data = await sendChatMessage(
                 text,
-                currentLocation
+                currentLocation,
+                conversationHistory
             );
 
             const assistantMessage = {
@@ -123,7 +132,8 @@ export default function Chatbot() {
                     <div className="space-y-7">
 
                         {messages.map((message) => {
-                            const isUser = message.role === "user";
+                            const isUser =
+                                message.role === "user";
 
                             return (
                                 <div
@@ -162,7 +172,6 @@ export default function Chatbot() {
 
                                             <ReactMarkdown
                                                 components={{
-
                                                     p: ({ children }) => (
                                                         <p className="mb-4 last:mb-0">
                                                             {children}
@@ -233,7 +242,10 @@ export default function Chatbot() {
                                                         </code>
                                                     ),
 
-                                                    a: ({ children, href }) => (
+                                                    a: ({
+                                                        children,
+                                                        href,
+                                                    }) => (
                                                         <a
                                                             href={href}
                                                             target="_blank"
@@ -265,13 +277,21 @@ export default function Chatbot() {
 
                                 <div className="flex items-center gap-1.5 pt-3">
                                     <span className="w-2 h-2 rounded-full bg-ink-300 animate-bounce" />
+
                                     <span
                                         className="w-2 h-2 rounded-full bg-ink-300 animate-bounce"
-                                        style={{ animationDelay: "120ms" }}
+                                        style={{
+                                            animationDelay:
+                                                "120ms",
+                                        }}
                                     />
+
                                     <span
                                         className="w-2 h-2 rounded-full bg-ink-300 animate-bounce"
-                                        style={{ animationDelay: "240ms" }}
+                                        style={{
+                                            animationDelay:
+                                                "240ms",
+                                        }}
                                     />
                                 </div>
 
@@ -300,7 +320,9 @@ export default function Chatbot() {
 
                         <button
                             onClick={handleSend}
-                            disabled={!input.trim() || loading}
+                            disabled={
+                                !input.trim() || loading
+                            }
                             className="w-11 h-11 rounded-xl bg-sky-500 text-white flex items-center justify-center disabled:opacity-40 hover:bg-sky-600 transition-colors shrink-0"
                         >
                             <Send size={18} />

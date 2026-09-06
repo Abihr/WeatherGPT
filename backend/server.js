@@ -3,7 +3,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const Groq = require("groq-sdk");
 
-dotenv.config();
+dotenv.config({ path: __dirname + "/.env" });
 
 const app = express();
 
@@ -21,7 +21,6 @@ app.use(
 
 app.use(express.json());
 
-
 // ============================================================
 // GROQ
 // ============================================================
@@ -29,7 +28,6 @@ app.use(express.json());
 const groq = new Groq({
     apiKey: process.env.GROQ_API_KEY,
 });
-
 
 // ============================================================
 // WEATHER FUNCTIONS
@@ -73,7 +71,6 @@ async function getWeather(location) {
     };
 }
 
-
 async function getWeatherByCoordinates(
     latitude,
     longitude
@@ -115,7 +112,6 @@ async function getWeatherByCoordinates(
             0,
     };
 }
-
 
 // ============================================================
 // NORMAL WEATHER API
@@ -177,7 +173,6 @@ app.get("/api/weather", async (req, res) => {
     }
 });
 
-
 // ============================================================
 // CURRENT LOCATION QUERY DETECTION
 // ============================================================
@@ -218,7 +213,6 @@ function isCurrentLocationQuery(message) {
     );
 }
 
-
 // ============================================================
 // CHATBOT API
 // ============================================================
@@ -228,6 +222,7 @@ app.post("/api/chat", async (req, res) => {
         const {
             message,
             currentLocation,
+            conversationHistory = [],
         } = req.body;
 
         if (
@@ -249,6 +244,10 @@ app.post("/api/chat", async (req, res) => {
             currentLocation
         );
 
+        console.log(
+            "🧠 CONVERSATION HISTORY:",
+            conversationHistory
+        );
 
         // ====================================================
         // CURRENT LOCATION WEATHER
@@ -285,23 +284,24 @@ app.post("/api/chat", async (req, res) => {
                 weatherData
             );
 
-
-            const weatherCompletion =
-                await groq.chat.completions.create({
-                    model:
-                        "openai/gpt-oss-20b",
-
-                    messages: [
-                        {
-                            role: "system",
-                            content: `
+            // Build messages using conversation history
+            const locationMessages = [
+                {
+                    role: "system",
+                    content: `
 You are WeatherGPT, an AI weather assistant.
+
+You can understand and remember the previous conversation.
 
 Answer the user's question using the supplied current-location weather data.
 
 Do not invent weather information.
 
 Keep the response natural, concise, and conversational.
+
+Use previous conversation context when it is relevant.
+
+If the user refers to something from an earlier message using words like "it", "there", "this weather", "that", "tonight", or similar references, use the conversation history to understand what they mean.
 
 If the user asks about the weather, temperature, humidity, wind, rain, or conditions, use the supplied data.
 
@@ -311,21 +311,31 @@ Do not mention GPS coordinates.
 
 Do not claim to know anything that is not contained in the supplied weather data.
 `,
-                        },
+                },
 
-                        {
-                            role: "user",
-                            content: message,
-                        },
+                ...conversationHistory,
 
-                        {
-                            role: "system",
-                            content:
-                                `Current-location weather data:\n${JSON.stringify(
-                                    weatherData
-                                )}`,
-                        },
-                    ],
+                {
+                    role: "user",
+                    content: message.trim(),
+                },
+
+                {
+                    role: "system",
+                    content:
+                        `Current-location weather data:\n${JSON.stringify(
+                            weatherData
+                        )}`,
+                },
+            ];
+
+            const weatherCompletion =
+                await groq.chat.completions.create({
+                    model:
+                        "openai/gpt-oss-20b",
+
+                    messages:
+                        locationMessages,
                 });
 
             return res.json({
@@ -337,7 +347,6 @@ Do not claim to know anything that is not contained in the supplied weather data
                     "I couldn't generate a weather response.",
             });
         }
-
 
         // ====================================================
         // NORMAL GROQ CHAT + CITY WEATHER TOOL
@@ -351,7 +360,26 @@ You are WeatherGPT, an AI weather assistant.
 
 You can answer normal conversational questions.
 
+You have access to the previous conversation history.
+
+Use that history to understand follow-up questions and references.
+
 When the user asks about weather for a specific city or location, use the get_weather tool.
+
+If the user previously mentioned a city and then asks a follow-up question without naming the city again, understand that the follow-up refers to the previously discussed location when appropriate.
+
+For example:
+
+User: "What's the weather in Khardaha?"
+Assistant: [weather response]
+User: "Is it good for going outside?"
+
+Understand that "it" refers to the weather in Khardaha.
+
+Similarly, if the user asks:
+"What should I eat in this weather?"
+
+Use the previously discussed weather context when available.
 
 Do not invent current weather information.
 
@@ -365,12 +393,13 @@ Do not mention internal tools, APIs, function calls, or implementation details.
 `,
             },
 
+            ...conversationHistory,
+
             {
                 role: "user",
                 content: message.trim(),
             },
         ];
-
 
         // ====================================================
         // WEATHER TOOL
@@ -406,7 +435,6 @@ Do not mention internal tools, APIs, function calls, or implementation details.
             },
         ];
 
-
         // ====================================================
         // FIRST GROQ REQUEST
         // ====================================================
@@ -423,10 +451,8 @@ Do not mention internal tools, APIs, function calls, or implementation details.
                 tool_choice: "auto",
             });
 
-
         const assistantMessage =
             completion.choices[0]?.message;
-
 
         // ====================================================
         // NO TOOL CALL
@@ -444,7 +470,6 @@ Do not mention internal tools, APIs, function calls, or implementation details.
             });
         }
 
-
         // ====================================================
         // TOOL CALL
         // ====================================================
@@ -452,7 +477,6 @@ Do not mention internal tools, APIs, function calls, or implementation details.
         messages.push(
             assistantMessage
         );
-
 
         for (
             const toolCall
@@ -480,9 +504,7 @@ Do not mention internal tools, APIs, function calls, or implementation details.
                 );
             }
 
-
             let toolResult;
-
 
             if (
                 toolName === "get_weather"
@@ -514,7 +536,6 @@ Do not mention internal tools, APIs, function calls, or implementation details.
                 );
             }
 
-
             messages.push({
                 role: "tool",
 
@@ -528,7 +549,6 @@ Do not mention internal tools, APIs, function calls, or implementation details.
             });
         }
 
-
         // ====================================================
         // FINAL GROQ RESPONSE
         // ====================================================
@@ -541,13 +561,11 @@ Do not mention internal tools, APIs, function calls, or implementation details.
                 messages,
             });
 
-
         const finalMessage =
             finalCompletion
                 .choices[0]
                 ?.message
                 ?.content;
-
 
         return res.json({
             reply:
@@ -567,7 +585,6 @@ Do not mention internal tools, APIs, function calls, or implementation details.
     }
 });
 
-
 // ============================================================
 // TEST ENDPOINT
 // ============================================================
@@ -578,7 +595,6 @@ app.get("/api/test", (req, res) => {
             "Backend is working!",
     });
 });
-
 
 // ============================================================
 // ROOT ENDPOINT
@@ -595,14 +611,9 @@ app.get("/", (req, res) => {
     });
 });
 
-
 // ============================================================
 // SERVER
 // ============================================================
-
-// IMPORTANT:
-// Render provides the PORT through process.env.PORT.
-// Do NOT hard-code port 5000 for production.
 
 const PORT =
     process.env.PORT || 5000;
