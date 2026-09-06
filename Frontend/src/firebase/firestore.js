@@ -136,33 +136,33 @@ export async function getReceivedRequests(userId) {
     snapshot.docs.map(async (requestDoc) => {
       const data = requestDoc.data();
 
-      // Get actual sender profile
       const sender = await getUser(data.senderId);
 
       return {
         requestId: requestDoc.id,
-
         senderId: data.senderId,
         receiverId: data.receiverId,
         status: data.status,
         createdAt: data.createdAt,
 
-        // Actual sender information
+        // Sender profile
         name: sender?.name || "User",
         username: sender?.username || "",
         email: sender?.email || "",
         photoURL: sender?.photoURL || "",
 
-        // Sender's location
+        // Sender location
         location: sender?.location || null,
         locationText: sender?.locationText || "",
+        latitude: sender?.latitude ?? null,
+        longitude: sender?.longitude ?? null,
 
-        // Sender's weather
+        // Sender weather
         weather: sender?.weather || null,
 
         // Sharing settings
         weatherSharing: sender?.weatherSharing ?? false,
-        locationSharing: sender?.locationSharing || "none",
+        locationSharing: sender?.locationSharing ?? "off",
       };
     })
   );
@@ -191,29 +191,33 @@ export async function getSentRequests(userId) {
     snapshot.docs.map(async (requestDoc) => {
       const data = requestDoc.data();
 
-      // Get actual receiver profile
       const receiver = await getUser(data.receiverId);
 
       return {
         requestId: requestDoc.id,
-
         senderId: data.senderId,
         receiverId: data.receiverId,
         status: data.status,
         createdAt: data.createdAt,
 
-        // Receiver information
+        // Receiver profile
         name: receiver?.name || "User",
         username: receiver?.username || "",
         email: receiver?.email || "",
         photoURL: receiver?.photoURL || "",
 
+        // Receiver location
         location: receiver?.location || null,
         locationText: receiver?.locationText || "",
+        latitude: receiver?.latitude ?? null,
+        longitude: receiver?.longitude ?? null,
+
+        // Receiver weather
         weather: receiver?.weather || null,
 
+        // Sharing settings
         weatherSharing: receiver?.weatherSharing ?? false,
-        locationSharing: receiver?.locationSharing || "none",
+        locationSharing: receiver?.locationSharing ?? "off",
       };
     })
   );
@@ -286,13 +290,10 @@ export async function acceptFriendRequest(
     }
   );
 
-  // Fetch the friend's COMPLETE profile
+  // Fetch complete friend's profile
   const friend = await getUser(user2);
 
-  console.log(
-    "FRIEND ACCEPTED:",
-    friend
-  );
+  console.log("FRIEND ACCEPTED:", friend);
 
   return {
     success: true,
@@ -376,8 +377,6 @@ export async function getFriends(userId) {
     const friends = await Promise.all(
       snapshot.docs.map(async (friendDoc) => {
         /*
-          IMPORTANT:
-
           friendDoc.id is the friend's Firebase UID.
 
           Example:
@@ -388,6 +387,7 @@ export async function getFriends(userId) {
                 UyTPmhTX7fX9w4V2oEg0zeoAhrB3
 
           Therefore:
+
           friendDoc.id =
           UyTPmhTX7fX9w4V2oEg0zeoAhrB3
         */
@@ -412,17 +412,7 @@ export async function getFriends(userId) {
         }
 
         /*
-          Return COMPLETE friend profile.
-
-          This includes:
-
-          name
-          username
-          photoURL
-          location
-          weather
-          weatherSharing
-          locationSharing
+          Return complete friend profile.
         */
 
         return {
@@ -434,23 +424,29 @@ export async function getFriends(userId) {
           email: friend.email || "",
           photoURL: friend.photoURL || "",
 
+          // Location
           location: friend.location || null,
           locationText: friend.locationText || "",
-
           latitude: friend.latitude ?? null,
           longitude: friend.longitude ?? null,
 
+          // Weather
           weather: friend.weather || null,
+
+          // Sharing
           weatherSharing:
             friend.weatherSharing ?? false,
 
           locationSharing:
-            friend.locationSharing || "none",
+            friend.locationSharing ?? "off",
 
+          // Timestamp
           weatherUpdatedAt:
             friend.weatherUpdatedAt || null,
 
+          // Friendship
           friendshipId: friendDoc.id,
+
           friendshipCreatedAt:
             friendDoc.data()?.createdAt || null,
         };
@@ -593,9 +589,14 @@ export async function updateWeatherSharing(
     userId
   );
 
-  await updateDoc(
+  await setDoc(
     userRef,
-    settings
+    {
+      ...settings,
+    },
+    {
+      merge: true,
+    }
   );
 
   return true;
@@ -621,10 +622,13 @@ export async function updateLocationSharing(
     userId
   );
 
-  await updateDoc(
+  await setDoc(
     userRef,
     {
       locationSharing: mode,
+    },
+    {
+      merge: true,
     }
   );
 
@@ -652,9 +656,11 @@ export async function updateUserLocation(
     userId
   );
 
-  await updateDoc(
+  await setDoc(
     userRef,
     {
+      uid: userId,
+
       latitude,
       longitude,
 
@@ -662,6 +668,12 @@ export async function updateUserLocation(
         lat: latitude,
         lng: longitude,
       },
+
+      locationUpdatedAt:
+        serverTimestamp(),
+    },
+    {
+      merge: true,
     }
   );
 
@@ -688,9 +700,11 @@ export async function updateUserWeather(
     userId
   );
 
-  await updateDoc(
+  await setDoc(
     userRef,
     {
+      uid: userId,
+
       weather: {
         temperature:
           weather?.temperature ??
@@ -724,6 +738,9 @@ export async function updateUserWeather(
 
       weatherUpdatedAt:
         serverTimestamp(),
+    },
+    {
+      merge: true,
     }
   );
 

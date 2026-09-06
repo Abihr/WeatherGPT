@@ -3,7 +3,9 @@ import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "./firebase/firebase";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+
+import { auth, db } from "./firebase/firebase";
 
 import { AppProvider } from "./context/AppContext";
 
@@ -55,9 +57,36 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      try {
+        setUser(currentUser);
+
+        if (currentUser) {
+          // Firestore document:
+          // users/{Firebase Authentication UID}
+          const userRef = doc(db, "users", currentUser.uid);
+
+          await setDoc(
+            userRef,
+            {
+              uid: currentUser.uid,
+              name: currentUser.displayName || "",
+              email: currentUser.email || "",
+              photoURL: currentUser.photoURL || "",
+              lastLogin: serverTimestamp(),
+            },
+            {
+              merge: true,
+            }
+          );
+
+          console.log("User data synced to Firestore:", currentUser.uid);
+        }
+      } catch (error) {
+        console.error("Error syncing user data:", error);
+      } finally {
+        setLoading(false);
+      }
     });
 
     return () => unsubscribe();
