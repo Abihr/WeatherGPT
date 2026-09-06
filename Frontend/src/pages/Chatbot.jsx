@@ -30,7 +30,7 @@ export default function Chatbot() {
         const userMessage = {
             id: Date.now(),
             role: "user",
-            text: text,
+            text,
         };
 
         setMessages((previous) => [
@@ -46,7 +46,6 @@ export default function Chatbot() {
                 user?.location?.lat ??
                 user?.latitude ??
                 null,
-
             longitude:
                 user?.location?.lng ??
                 user?.longitude ??
@@ -102,15 +101,15 @@ export default function Chatbot() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 pb-28 md:pb-10">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-28 md:pb-10">
 
             {/* Header */}
-            <div className="mb-5">
+            <div className="mb-6">
                 <h1 className="text-xl md:text-2xl font-display font-extrabold text-ink-900">
                     WeatherGPT
                 </h1>
 
-                <p className="text-sm text-ink-400 mt-0.5">
+                <p className="text-sm text-ink-400 mt-1">
                     Your AI weather assistant
                 </p>
             </div>
@@ -119,158 +118,167 @@ export default function Chatbot() {
             <div className="bg-white rounded-xl3 shadow-card overflow-hidden">
 
                 {/* Messages */}
-                <div className="h-[500px] overflow-y-auto p-4 sm:p-6 space-y-5">
+                <div className="h-[520px] overflow-y-auto px-4 sm:px-7 py-6">
 
-                    {messages.map((message) => {
-                        const isUser = message.role === "user";
+                    <div className="space-y-7">
 
-                        return (
-                            <div
-                                key={message.id}
-                                className={`flex gap-3 ${
-                                    isUser
-                                        ? "justify-end"
-                                        : "justify-start"
-                                }`}
-                            >
+                        {messages.map((message) => {
+                            const isUser = message.role === "user";
 
-                                {/* Assistant icon */}
-                                {!isUser && (
-                                    <div className="w-9 h-9 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center shrink-0">
-                                        <Bot size={18} />
-                                    </div>
-                                )}
-
-                                {/* Message */}
+                            return (
                                 <div
-                                    className={
+                                    key={message.id}
+                                    className={`flex gap-3 ${
                                         isUser
-                                            ? "max-w-[75%] px-4 py-3 rounded-2xl rounded-br-md text-sm bg-sky-500 text-white"
-                                            : "max-w-[85%] px-4 py-3 rounded-2xl rounded-bl-md text-sm bg-sky-50 text-ink-700"
-                                    }
+                                            ? "justify-end"
+                                            : "justify-start"
+                                    }`}
                                 >
 
-                                    {isUser ? (
-                                        <div className="whitespace-pre-wrap">
-                                            {message.text}
+                                    {/* Assistant icon */}
+                                    {!isUser && (
+                                        <div className="w-9 h-9 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center shrink-0 mt-1">
+                                            <Bot size={18} />
                                         </div>
+                                    )}
+
+                                    {/* User message */}
+                                    {isUser ? (
+                                        <>
+                                            <div className="max-w-[75%]">
+                                                <div className="px-4 py-3 rounded-2xl rounded-br-md bg-sky-500 text-white text-sm leading-6">
+                                                    {message.text}
+                                                </div>
+                                            </div>
+
+                                            <div className="w-9 h-9 rounded-full bg-ink-100 text-ink-600 flex items-center justify-center shrink-0 mt-1">
+                                                <User size={18} />
+                                            </div>
+                                        </>
                                     ) : (
-                                        <ReactMarkdown
-                                            components={{
-                                                p: ({ children }) => (
-                                                    <p className="mb-3 last:mb-0 leading-6">
-                                                        {children}
-                                                    </p>
-                                                ),
 
-                                                strong: ({ children }) => (
-                                                    <strong className="font-bold text-ink-900">
-                                                        {children}
-                                                    </strong>
-                                                ),
+                                        /* Assistant message */
+                                        <div className="max-w-[88%] sm:max-w-[82%] text-ink-700 text-sm leading-6">
 
-                                                em: ({ children }) => (
-                                                    <em className="italic">
-                                                        {children}
-                                                    </em>
-                                                ),
+                                            <ReactMarkdown
+                                                components={{
 
-                                                ul: ({ children }) => (
-                                                    <ul className="list-disc pl-5 mb-3 space-y-1.5">
-                                                        {children}
-                                                    </ul>
-                                                ),
+                                                    p: ({ children }) => (
+                                                        <p className="mb-4 last:mb-0">
+                                                            {children}
+                                                        </p>
+                                                    ),
 
-                                                ol: ({ children }) => (
-                                                    <ol className="list-decimal pl-5 mb-3 space-y-2">
-                                                        {children}
-                                                    </ol>
-                                                ),
+                                                    strong: ({ children }) => (
+                                                        <strong className="font-bold text-ink-900">
+                                                            {children}
+                                                        </strong>
+                                                    ),
 
-                                                li: ({ children }) => (
-                                                    <li className="pl-1 leading-6">
-                                                        {children}
-                                                    </li>
-                                                ),
+                                                    em: ({ children }) => (
+                                                        <em className="italic">
+                                                            {children}
+                                                        </em>
+                                                    ),
 
-                                                h1: ({ children }) => (
-                                                    <h1 className="text-lg font-bold text-ink-900 mb-3">
-                                                        {children}
-                                                    </h1>
-                                                ),
+                                                    ol: ({ children }) => (
+                                                        <ol className="space-y-4 my-4 pl-6 list-decimal marker:font-semibold marker:text-sky-600">
+                                                            {children}
+                                                        </ol>
+                                                    ),
 
-                                                h2: ({ children }) => (
-                                                    <h2 className="text-base font-bold text-ink-900 mt-4 mb-2">
-                                                        {children}
-                                                    </h2>
-                                                ),
+                                                    ul: ({ children }) => (
+                                                        <ul className="space-y-2 my-4 pl-6 list-disc marker:text-sky-500">
+                                                            {children}
+                                                        </ul>
+                                                    ),
 
-                                                h3: ({ children }) => (
-                                                    <h3 className="font-bold text-ink-900 mt-3 mb-1.5">
-                                                        {children}
-                                                    </h3>
-                                                ),
+                                                    li: ({ children }) => (
+                                                        <li className="pl-1 leading-6">
+                                                            {children}
+                                                        </li>
+                                                    ),
 
-                                                blockquote: ({ children }) => (
-                                                    <blockquote className="border-l-4 border-sky-300 pl-4 my-3 italic text-ink-500">
-                                                        {children}
-                                                    </blockquote>
-                                                ),
+                                                    h1: ({ children }) => (
+                                                        <h1 className="text-xl font-bold text-ink-900 mt-5 mb-3">
+                                                            {children}
+                                                        </h1>
+                                                    ),
 
-                                                hr: () => (
-                                                    <hr className="my-4 border-ink-100" />
-                                                ),
+                                                    h2: ({ children }) => (
+                                                        <h2 className="text-lg font-bold text-ink-900 mt-5 mb-3">
+                                                            {children}
+                                                        </h2>
+                                                    ),
 
-                                                code: ({ children }) => (
-                                                    <code className="px-1.5 py-0.5 rounded bg-ink-100 text-ink-800 text-xs">
-                                                        {children}
-                                                    </code>
-                                                ),
+                                                    h3: ({ children }) => (
+                                                        <h3 className="text-base font-bold text-ink-900 mt-4 mb-2">
+                                                            {children}
+                                                        </h3>
+                                                    ),
 
-                                                a: ({ children, href }) => (
-                                                    <a
-                                                        href={href}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-sky-600 underline hover:text-sky-700"
-                                                    >
-                                                        {children}
-                                                    </a>
-                                                ),
-                                            }}
-                                        >
-                                            {message.text}
-                                        </ReactMarkdown>
+                                                    blockquote: ({ children }) => (
+                                                        <blockquote className="border-l-4 border-sky-300 pl-4 my-4 text-ink-500 italic">
+                                                            {children}
+                                                        </blockquote>
+                                                    ),
+
+                                                    hr: () => (
+                                                        <hr className="my-5 border-ink-100" />
+                                                    ),
+
+                                                    code: ({ children }) => (
+                                                        <code className="px-1.5 py-0.5 rounded-md bg-ink-100 text-ink-800 text-xs">
+                                                            {children}
+                                                        </code>
+                                                    ),
+
+                                                    a: ({ children, href }) => (
+                                                        <a
+                                                            href={href}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-sky-600 underline hover:text-sky-700"
+                                                        >
+                                                            {children}
+                                                        </a>
+                                                    ),
+                                                }}
+                                            >
+                                                {message.text}
+                                            </ReactMarkdown>
+
+                                        </div>
                                     )}
 
                                 </div>
+                            );
+                        })}
 
-                                {/* User icon */}
-                                {isUser && (
-                                    <div className="w-9 h-9 rounded-full bg-ink-100 text-ink-600 flex items-center justify-center shrink-0">
-                                        <User size={18} />
-                                    </div>
-                                )}
+                        {/* Loading */}
+                        {loading && (
+                            <div className="flex gap-3 justify-start">
+
+                                <div className="w-9 h-9 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center shrink-0 mt-1">
+                                    <Bot size={18} />
+                                </div>
+
+                                <div className="flex items-center gap-1.5 pt-3">
+                                    <span className="w-2 h-2 rounded-full bg-ink-300 animate-bounce" />
+                                    <span
+                                        className="w-2 h-2 rounded-full bg-ink-300 animate-bounce"
+                                        style={{ animationDelay: "120ms" }}
+                                    />
+                                    <span
+                                        className="w-2 h-2 rounded-full bg-ink-300 animate-bounce"
+                                        style={{ animationDelay: "240ms" }}
+                                    />
+                                </div>
 
                             </div>
-                        );
-                    })}
+                        )}
 
-                    {/* Loading */}
-                    {loading && (
-                        <div className="flex gap-3 justify-start">
-
-                            <div className="w-9 h-9 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center shrink-0">
-                                <Bot size={18} />
-                            </div>
-
-                            <div className="bg-sky-50 text-ink-400 px-4 py-3 rounded-2xl rounded-bl-md text-sm">
-                                Thinking...
-                            </div>
-
-                        </div>
-                    )}
-
+                    </div>
                 </div>
 
                 {/* Input */}
@@ -287,13 +295,13 @@ export default function Chatbot() {
                             onKeyDown={handleKeyDown}
                             placeholder="Ask WeatherGPT..."
                             disabled={loading}
-                            className="flex-1 px-4 py-3 rounded-xl bg-sky-50 border border-sky-100 outline-none text-sm text-ink-800 placeholder:text-ink-400 focus:border-sky-300 disabled:opacity-60"
+                            className="flex-1 px-4 py-3 rounded-xl bg-sky-50 border border-sky-100 outline-none text-sm text-ink-800 placeholder:text-ink-400 focus:border-sky-300 focus:ring-2 focus:ring-sky-100 disabled:opacity-60"
                         />
 
                         <button
                             onClick={handleSend}
                             disabled={!input.trim() || loading}
-                            className="w-11 h-11 rounded-xl bg-sky-500 text-white flex items-center justify-center disabled:opacity-40 hover:bg-sky-600 transition-colors"
+                            className="w-11 h-11 rounded-xl bg-sky-500 text-white flex items-center justify-center disabled:opacity-40 hover:bg-sky-600 transition-colors shrink-0"
                         >
                             <Send size={18} />
                         </button>
