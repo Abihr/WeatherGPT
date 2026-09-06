@@ -24,6 +24,7 @@ import Profile from "./pages/Profile";
 import BlockedUsers from "./pages/BlockedUsers";
 import Alerts from "./pages/Alerts";
 import Settings from "./pages/Settings";
+import Chatbot from "./pages/Chatbot";
 
 function AppShell() {
   return (
@@ -43,6 +44,7 @@ function AppShell() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/blocked" element={<BlockedUsers />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/chatbot" element={<Chatbot />} />
         </Routes>
       </div>
 
