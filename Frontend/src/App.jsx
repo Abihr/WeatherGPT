@@ -68,7 +68,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-sky-wash flex items-center justify-center">
         <p className="text-sm text-ink-400">
-          Loading WeatherCircle...
+          Loading WeatherHub...
         </p>
       </div>
     );

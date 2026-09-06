@@ -280,12 +280,12 @@ export default function Login() {
                 transition-transform duration-200
                 hover:scale-110
               "
-              alt="WeatherCircle logo"
+              alt="WeatherHub logo"
             />
           </span>
 
           <h1 className="text-3xl font-bold text-slate-800 mt-3">
-            WeatherCircle
+            WeatherHub
           </h1>
 
           <p className="text-slate-500 mt-2 text-center">
@@ -348,8 +348,8 @@ export default function Login() {
 
             <p className="text-sm text-slate-500 mt-1">
               {mode === "register"
-                ? "Join WeatherCircle and connect with people nearby."
-                : "Sign in to continue to WeatherCircle."}
+                ? "Join WeatherHub and connect with people nearby."
+                : "Sign in to continue to WeatherHub."}
             </p>
           </div>
 
@@ -521,7 +521,7 @@ export default function Login() {
               />
 
               <p className="text-xs text-slate-600 leading-relaxed">
-                WeatherCircle can use your location to show
+                WeatherHub can use your location to show
                 weather conditions and nearby community reports.
               </p>
             </div>
@@ -533,7 +533,7 @@ export default function Login() {
         ========================= */}
 
         <p className="text-center text-xs text-slate-400 mt-6">
-          © 2026 WeatherCircle
+          © 2026 WeatherHub
         </p>
       </div>
     </div>
