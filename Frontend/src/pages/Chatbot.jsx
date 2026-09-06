@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Send, Bot, User } from "lucide-react";
+import { sendChatMessage } from "../services/chatService";
 
 export default function Chatbot() {
     const [messages, setMessages] = useState([
@@ -11,11 +12,12 @@ export default function Chatbot() {
     ]);
 
     const [input, setInput] = useState("");
+    const [loading, setLoading] = useState(false);
 
-    function handleSend() {
+    async function handleSend() {
         const text = input.trim();
 
-        if (!text) return;
+        if (!text || loading) return;
 
         const userMessage = {
             id: Date.now(),
@@ -25,6 +27,31 @@ export default function Chatbot() {
 
         setMessages((previous) => [...previous, userMessage]);
         setInput("");
+        setLoading(true);
+
+        try {
+            const data = await sendChatMessage(text);
+
+            const assistantMessage = {
+                id: Date.now() + 1,
+                role: "assistant",
+                text: data.reply,
+            };
+
+            setMessages((previous) => [...previous, assistantMessage]);
+        } catch (error) {
+            console.error("Chat error:", error);
+
+            const errorMessage = {
+                id: Date.now() + 1,
+                role: "assistant",
+                text: "Sorry, I couldn't connect to the AI right now.",
+            };
+
+            setMessages((previous) => [...previous, errorMessage]);
+        } finally {
+            setLoading(false);
+        }
     }
 
     function handleKeyDown(event) {
@@ -83,6 +110,18 @@ export default function Chatbot() {
                             </div>
                         );
                     })}
+
+                    {loading && (
+                        <div className="flex gap-3 justify-start">
+                            <div className="w-9 h-9 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center shrink-0">
+                                <Bot size={18} />
+                            </div>
+
+                            <div className="bg-sky-50 text-ink-400 px-4 py-3 rounded-2xl rounded-bl-md text-sm">
+                                Thinking...
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="border-t border-ink-100 p-3 sm:p-4">
@@ -90,15 +129,18 @@ export default function Chatbot() {
                         <input
                             type="text"
                             value={input}
-                            onChange={(event) => setInput(event.target.value)}
+                            onChange={(event) =>
+                                setInput(event.target.value)
+                            }
                             onKeyDown={handleKeyDown}
                             placeholder="Ask WeatherGPT..."
-                            className="flex-1 px-4 py-3 rounded-xl bg-sky-50 border border-sky-100 outline-none text-sm text-ink-800 placeholder:text-ink-400 focus:border-sky-300"
+                            disabled={loading}
+                            className="flex-1 px-4 py-3 rounded-xl bg-sky-50 border border-sky-100 outline-none text-sm text-ink-800 placeholder:text-ink-400 focus:border-sky-300 disabled:opacity-60"
                         />
 
                         <button
                             onClick={handleSend}
-                            disabled={!input.trim()}
+                            disabled={!input.trim() || loading}
                             className="w-11 h-11 rounded-xl bg-sky-500 text-white flex items-center justify-center disabled:opacity-40 hover:bg-sky-600 transition-colors"
                         >
                             <Send size={18} />
