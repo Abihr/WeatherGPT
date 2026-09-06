@@ -115,15 +115,14 @@ export default function Chatbot() {
                 </p>
             </div>
 
-            {/* Chat Container */}
+            {/* Chat container */}
             <div className="bg-white rounded-xl3 shadow-card overflow-hidden">
 
                 {/* Messages */}
-                <div className="h-[500px] overflow-y-auto p-4 sm:p-6 space-y-4">
+                <div className="h-[500px] overflow-y-auto p-4 sm:p-6 space-y-5">
 
                     {messages.map((message) => {
-                        const isUser =
-                            message.role === "user";
+                        const isUser = message.role === "user";
 
                         return (
                             <div
@@ -135,109 +134,99 @@ export default function Chatbot() {
                                 }`}
                             >
 
-                                {/* Bot Avatar */}
+                                {/* Assistant icon */}
                                 {!isUser && (
                                     <div className="w-9 h-9 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center shrink-0">
                                         <Bot size={18} />
                                     </div>
                                 )}
 
-                                {/* Message Bubble */}
+                                {/* Message */}
                                 <div
-                                    className={`max-w-[75%] px-4 py-3 rounded-2xl text-sm ${
+                                    className={
                                         isUser
-                                            ? "bg-sky-500 text-white rounded-br-md"
-                                            : "bg-sky-50 text-ink-700 rounded-bl-md"
-                                    }`}
+                                            ? "max-w-[75%] px-4 py-3 rounded-2xl rounded-br-md text-sm bg-sky-500 text-white"
+                                            : "max-w-[85%] px-4 py-3 rounded-2xl rounded-bl-md text-sm bg-sky-50 text-ink-700"
+                                    }
                                 >
+
                                     {isUser ? (
-                                        message.text
+                                        <div className="whitespace-pre-wrap">
+                                            {message.text}
+                                        </div>
                                     ) : (
                                         <ReactMarkdown
                                             components={{
-                                                /* Paragraphs */
                                                 p: ({ children }) => (
-                                                    <p className="mb-2 last:mb-0 leading-relaxed">
+                                                    <p className="mb-3 last:mb-0 leading-6">
                                                         {children}
                                                     </p>
                                                 ),
 
-                                                /* Bold */
                                                 strong: ({ children }) => (
-                                                    <strong className="font-semibold text-ink-900">
+                                                    <strong className="font-bold text-ink-900">
                                                         {children}
                                                     </strong>
                                                 ),
 
-                                                /* Italic */
                                                 em: ({ children }) => (
-                                                    <em>
+                                                    <em className="italic">
                                                         {children}
                                                     </em>
                                                 ),
 
-                                                /* Unordered Lists */
                                                 ul: ({ children }) => (
-                                                    <ul className="list-disc pl-5 mb-2 space-y-1">
+                                                    <ul className="list-disc pl-5 mb-3 space-y-1.5">
                                                         {children}
                                                     </ul>
                                                 ),
 
-                                                /* Ordered Lists */
                                                 ol: ({ children }) => (
-                                                    <ol className="list-decimal pl-5 mb-2 space-y-1">
+                                                    <ol className="list-decimal pl-5 mb-3 space-y-2">
                                                         {children}
                                                     </ol>
                                                 ),
 
-                                                /* List Items */
                                                 li: ({ children }) => (
-                                                    <li className="leading-relaxed">
+                                                    <li className="pl-1 leading-6">
                                                         {children}
                                                     </li>
                                                 ),
 
-                                                /* Heading 1 */
                                                 h1: ({ children }) => (
-                                                    <h1 className="text-lg font-bold text-ink-900 mb-2">
+                                                    <h1 className="text-lg font-bold text-ink-900 mb-3">
                                                         {children}
                                                     </h1>
                                                 ),
 
-                                                /* Heading 2 */
                                                 h2: ({ children }) => (
-                                                    <h2 className="text-base font-bold text-ink-900 mb-2">
+                                                    <h2 className="text-base font-bold text-ink-900 mt-4 mb-2">
                                                         {children}
                                                     </h2>
                                                 ),
 
-                                                /* Heading 3 */
                                                 h3: ({ children }) => (
-                                                    <h3 className="font-semibold text-ink-900 mb-1">
+                                                    <h3 className="font-bold text-ink-900 mt-3 mb-1.5">
                                                         {children}
                                                     </h3>
                                                 ),
 
-                                                /* Inline Code */
-                                                code: ({ children }) => (
-                                                    <code className="bg-white/70 px-1.5 py-0.5 rounded text-xs font-mono">
-                                                        {children}
-                                                    </code>
-                                                ),
-
-                                                /* Blockquotes */
                                                 blockquote: ({ children }) => (
-                                                    <blockquote className="border-l-2 border-sky-300 pl-3 my-2 italic text-ink-500">
+                                                    <blockquote className="border-l-4 border-sky-300 pl-4 my-3 italic text-ink-500">
                                                         {children}
                                                     </blockquote>
                                                 ),
 
-                                                /* Horizontal Rule */
                                                 hr: () => (
-                                                    <hr className="my-3 border-sky-100" />
+                                                    <hr className="my-4 border-ink-100" />
                                                 ),
 
-                                                /* Links */
+                                                code: ({ children }) => (
+                                                    <code className="px-1.5 py-0.5 rounded bg-ink-100 text-ink-800 text-xs">
+                                                        {children}
+                                                    </code>
+                                                ),
+
                                                 a: ({ children, href }) => (
                                                     <a
                                                         href={href}
@@ -253,9 +242,10 @@ export default function Chatbot() {
                                             {message.text}
                                         </ReactMarkdown>
                                     )}
+
                                 </div>
 
-                                {/* User Avatar */}
+                                {/* User icon */}
                                 {isUser && (
                                     <div className="w-9 h-9 rounded-full bg-ink-100 text-ink-600 flex items-center justify-center shrink-0">
                                         <User size={18} />
@@ -266,7 +256,7 @@ export default function Chatbot() {
                         );
                     })}
 
-                    {/* Loading Message */}
+                    {/* Loading */}
                     {loading && (
                         <div className="flex gap-3 justify-start">
 
@@ -302,10 +292,7 @@ export default function Chatbot() {
 
                         <button
                             onClick={handleSend}
-                            disabled={
-                                !input.trim() ||
-                                loading
-                            }
+                            disabled={!input.trim() || loading}
                             className="w-11 h-11 rounded-xl bg-sky-500 text-white flex items-center justify-center disabled:opacity-40 hover:bg-sky-600 transition-colors"
                         >
                             <Send size={18} />
@@ -316,7 +303,6 @@ export default function Chatbot() {
                 </div>
 
             </div>
-
         </div>
     );
 }
