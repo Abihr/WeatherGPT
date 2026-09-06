@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { Send, Bot, User } from "lucide-react";
+import { useApp } from "../context/AppContext";
 import { sendChatMessage } from "../services/chatService";
 
 export default function Chatbot() {
+    const { user } = useApp();
+    console.log("🤖 CHATBOT USER:", user);
+
     const [messages, setMessages] = useState([
         {
             id: 1,
@@ -30,7 +34,17 @@ export default function Chatbot() {
         setLoading(true);
 
         try {
-            const data = await sendChatMessage(text);
+            const data = await sendChatMessage(text, {
+                latitude:
+                    user?.latitude ??
+                    user?.location?.lat ??
+                    null,
+
+                longitude:
+                    user?.longitude ??
+                    user?.location?.lng ??
+                    null,
+            });
 
             const assistantMessage = {
                 id: Date.now() + 1,
@@ -38,7 +52,10 @@ export default function Chatbot() {
                 text: data.reply,
             };
 
-            setMessages((previous) => [...previous, assistantMessage]);
+            setMessages((previous) => [
+                ...previous,
+                assistantMessage,
+            ]);
         } catch (error) {
             console.error("Chat error:", error);
 
@@ -48,7 +65,10 @@ export default function Chatbot() {
                 text: "Sorry, I couldn't connect to the AI right now.",
             };
 
-            setMessages((previous) => [...previous, errorMessage]);
+            setMessages((previous) => [
+                ...previous,
+                errorMessage,
+            ]);
         } finally {
             setLoading(false);
         }
@@ -75,7 +95,8 @@ export default function Chatbot() {
             <div className="bg-white rounded-xl3 shadow-card overflow-hidden">
                 <div className="h-[500px] overflow-y-auto p-4 sm:p-6 space-y-4">
                     {messages.map((message) => {
-                        const isUser = message.role === "user";
+                        const isUser =
+                            message.role === "user";
 
                         return (
                             <div
@@ -140,7 +161,10 @@ export default function Chatbot() {
 
                         <button
                             onClick={handleSend}
-                            disabled={!input.trim() || loading}
+                            disabled={
+                                !input.trim() ||
+                                loading
+                            }
                             className="w-11 h-11 rounded-xl bg-sky-500 text-white flex items-center justify-center disabled:opacity-40 hover:bg-sky-600 transition-colors"
                         >
                             <Send size={18} />

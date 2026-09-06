@@ -1,51 +1,99 @@
-import { weatherIcon } from "../data/mockData";
+function mapWeatherIcon(weatherMain) {
+    const condition = weatherMain.toLowerCase();
 
-export async function getCurrentWeather(latitude, longitude) {
-  const response = await fetch(
-    `http://localhost:5000/api/weather?lat=${latitude}&lon=${longitude}`
-  );
+    if (condition.includes("thunderstorm")) {
+        return "storm";
+    }
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
+    if (condition.includes("drizzle")) {
+        return "rain";
+    }
 
-    throw new Error(
-      errorData.error || "Failed to fetch weather"
+    if (condition.includes("rain")) {
+        return "rain";
+    }
+
+    if (condition.includes("snow")) {
+        return "snow";
+    }
+
+    if (
+        condition.includes("mist") ||
+        condition.includes("fog") ||
+        condition.includes("haze")
+    ) {
+        return "fog";
+    }
+
+    if (condition.includes("cloud")) {
+        return "cloudy";
+    }
+
+    if (condition.includes("clear")) {
+        return "sunny";
+    }
+
+    return "cloudy";
+}
+
+
+export async function getCurrentWeather(
+    latitude,
+    longitude
+) {
+    const response = await fetch(
+        `http://localhost:5000/api/weather?lat=${latitude}&lon=${longitude}`
     );
-  }
 
-  const data = await response.json();
+    if (!response.ok) {
+        const errorData = await response.json();
 
-  return {
-    // Weather information
-    icon: mapWeatherIcon(data.weather?.[0]?.main),
-    condition: data.weather?.[0]?.description || "Unknown",
-    temp: Math.round(data.main?.temp ?? 0),
-    feelsLike: Math.round(data.main?.feels_like ?? 0),
-    humidity: data.main?.humidity ?? 0,
+        throw new Error(
+            errorData.error ||
+            "Failed to fetch weather"
+        );
+    }
 
-    // OpenWeather wind speed is m/s → km/h
-    wind: Math.round((data.wind?.speed ?? 0) * 3.6),
+    const data = await response.json();
 
-    // Rain in last 1 hour
-    rain: data.rain?.["1h"] || 0,
+    console.log(
+        "🌍 RAW WEATHER DATA:",
+        data
+    );
 
-    // Location
-    locationName: data.name || "Unknown location",
-    country: data.sys?.country || "",
-  };
-}
+    return {
+        icon: mapWeatherIcon(
+            data.weather[0].main
+        ),
 
-function mapWeatherIcon(condition) {
-  const value = condition?.toLowerCase() || "";
+        condition:
+            data.weather[0].description,
 
-  if (value.includes("clear")) return "sunny";
-  if (value.includes("cloud")) return "partly-cloudy";
-  if (value.includes("rain")) return "rain";
-  if (value.includes("storm") || value.includes("thunder")) return "rain";
+        temp: Math.round(
+            data.main.temp
+        ),
 
-  return "cloudy";
-}
+        feelsLike: Math.round(
+            data.main.feels_like
+        ),
 
-export function iconFor(key) {
-  return weatherIcon[key] || "🌤️";
+        humidity:
+            data.main.humidity,
+
+        wind: Math.round(
+            data.wind.speed * 3.6
+        ),
+
+        pressure:
+            data.main.pressure,
+
+        rain:
+            data.rain?.["1h"] ?? 0,
+
+        locationName:
+            data.name,
+
+        country:
+            data.sys.country,
+    };
 }
