@@ -1,21 +1,10 @@
 function mapWeatherIcon(weatherMain) {
     const condition = weatherMain.toLowerCase();
 
-    if (condition.includes("thunderstorm")) {
-        return "storm";
-    }
-
-    if (condition.includes("drizzle")) {
-        return "rain";
-    }
-
-    if (condition.includes("rain")) {
-        return "rain";
-    }
-
-    if (condition.includes("snow")) {
-        return "snow";
-    }
+    if (condition.includes("thunderstorm")) return "storm";
+    if (condition.includes("drizzle")) return "rain";
+    if (condition.includes("rain")) return "rain";
+    if (condition.includes("snow")) return "snow";
 
     if (
         condition.includes("mist") ||
@@ -25,24 +14,15 @@ function mapWeatherIcon(weatherMain) {
         return "fog";
     }
 
-    if (condition.includes("cloud")) {
-        return "cloudy";
-    }
-
-    if (condition.includes("clear")) {
-        return "sunny";
-    }
+    if (condition.includes("cloud")) return "cloudy";
+    if (condition.includes("clear")) return "sunny";
 
     return "cloudy";
 }
 
-
-export async function getCurrentWeather(
-    latitude,
-    longitude
-) {
+export async function getCurrentWeather(latitude, longitude) {
     const response = await fetch(
-        `http://localhost:5000/api/weather?lat=${latitude}&lon=${longitude}`
+        `/api/weather?lat=${latitude}&lon=${longitude}`
     );
 
     if (!response.ok) {
@@ -97,3 +77,4 @@ export async function getCurrentWeather(
             data.sys.country,
     };
 }
+
