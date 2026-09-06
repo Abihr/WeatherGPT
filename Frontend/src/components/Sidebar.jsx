@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+
 import {
   Home,
   Users,
@@ -8,9 +9,11 @@ import {
   Bell,
   User,
   Settings,
-  CloudSun,
+  Bot,
 } from "lucide-react";
+
 import { useApp } from "../context/AppContext";
+
 import logo from "../assets/logo_simple.png";
 
 const links = [
@@ -19,6 +22,7 @@ const links = [
   { to: "/requests", label: "Requests", icon: Inbox },
   { to: "/map", label: "Map", icon: Map },
   { to: "/compare", label: "Compare", icon: RefreshCw },
+  { to: "/chatbot", label: "WeatherGPT", icon: Bot },
   { to: "/alerts", label: "Alerts", icon: Bell },
   { to: "/profile", label: "Profile", icon: User },
 ];
@@ -28,45 +32,51 @@ export default function Sidebar() {
 
   return (
     <aside className="hidden md:flex md:flex-col w-64 shrink-0 h-screen sticky top-0 border-r border-sky-100 bg-white/70 backdrop-blur-sm px-4 py-6">
+
+      {/* Logo */}
       <div className="flex items-center gap-3 px-2 mb-8">
+
         <div
           className="
-    w-15 h-15
-    p-1
-    rounded-2xl
-    shadow-sm
-    flex items-center justify-center
-    overflow-hidden
-  "
+            w-15 h-15
+            p-1
+            rounded-2xl
+            shadow-sm
+            flex items-center justify-center
+            overflow-hidden
+          "
         >
           <img
             src={logo}
             className="
-        w-full hfull
-        object-cover
-        transition-transform duration-200
-        hover:scale-110
-      "
+              w-full h-full
+              object-cover
+              transition-transform duration-200
+              hover:scale-110
+            "
             alt="WeatherHub logo"
           />
         </div>
 
         <span
           className="
-    font-display
-    font-extrabold
-    text-lg
-    text-ink-900
-    tracking-tight
-  "
+            font-display
+            font-extrabold
+            text-lg
+            text-ink-900
+            tracking-tight
+          "
         >
           WeatherHub
         </span>
+
       </div>
 
-      {/* <CloudSun size={19} className="text-white" strokeWidth={2.2} /> */}
+      {/* Navigation */}
       <nav className="flex-1 flex flex-col gap-1">
+
         {links.map(({ to, label, icon: Icon }) => (
+
           <NavLink
             key={to}
             to={to}
@@ -79,18 +89,32 @@ export default function Sidebar() {
               }`
             }
           >
-            <Icon size={18} strokeWidth={2.1} />
-            <span className="flex-1">{label}</span>
+
+            <Icon
+              size={18}
+              strokeWidth={2.1}
+            />
+
+            <span className="flex-1">
+              {label}
+            </span>
+
+            {/* Friend request notification */}
             {label === "Requests" && received.length > 0 && (
               <span className="text-[11px] font-semibold bg-sun-400 text-white rounded-full h-5 min-w-5 px-1 flex items-center justify-center">
                 {received.length}
               </span>
             )}
+
           </NavLink>
+
         ))}
+
       </nav>
 
+      {/* Settings */}
       <div className="pt-4 mt-4 border-t border-sky-100">
+
         <NavLink
           to="/settings"
           className={({ isActive }) =>
@@ -101,10 +125,18 @@ export default function Sidebar() {
             }`
           }
         >
-          <Settings size={18} strokeWidth={2.1} />
+
+          <Settings
+            size={18}
+            strokeWidth={2.1}
+          />
+
           Settings
+
         </NavLink>
+
       </div>
+
     </aside>
   );
 }
