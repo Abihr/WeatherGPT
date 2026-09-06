@@ -10,6 +10,7 @@ import {
   User,
   Settings,
   Bot,
+ Train 
 } from "lucide-react";
 
 import { useApp } from "../context/AppContext";
@@ -25,6 +26,7 @@ const links = [
   { to: "/chatbot", label: "WeatherGPT", icon: Bot },
   { to: "/alerts", label: "Alerts", icon: Bell },
   { to: "/profile", label: "Profile", icon: User },
+  { to: "/railway-weather", label: "Railway Weather", icon: Train },
 ];
 
 export default function Sidebar() {

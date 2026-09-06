@@ -25,6 +25,7 @@ import BlockedUsers from "./pages/BlockedUsers";
 import Alerts from "./pages/Alerts";
 import Settings from "./pages/Settings";
 import Chatbot from "./pages/Chatbot";
+import RailwayWeather from "./components/RailwayWeather";
 
 function AppShell() {
   return (
@@ -45,6 +46,8 @@ function AppShell() {
           <Route path="/blocked" element={<BlockedUsers />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/chatbot" element={<Chatbot />} />
+          <Route path="/Frontend" element={<Chatbot />} />
+          <Route path="/railway-weather" element={<RailwayWeather />} />
         </Routes>
       </div>
 
@@ -79,7 +82,7 @@ export default function App() {
             },
             {
               merge: true,
-            }
+            },
           );
 
           console.log("User data synced to Firestore:", currentUser.uid);
@@ -98,9 +101,7 @@ export default function App() {
   if (loading) {
     return (
       <div className="min-h-screen bg-sky-wash flex items-center justify-center">
-        <p className="text-sm text-ink-400">
-          Loading WeatherHub...
-        </p>
+        <p className="text-sm text-ink-400">Loading WeatherHub...</p>
       </div>
     );
   }
