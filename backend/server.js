@@ -7,8 +7,24 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors());
+// ============================================================
+// MIDDLEWARE
+// ============================================================
+
+app.use(
+    cors({
+        origin: "*",
+        methods: ["GET", "POST", "OPTIONS"],
+        allowedHeaders: ["Content-Type", "Authorization"],
+    })
+);
+
 app.use(express.json());
+
+
+// ============================================================
+// GROQ
+// ============================================================
 
 const groq = new Groq({
     apiKey: process.env.GROQ_API_KEY,
@@ -135,7 +151,9 @@ app.get("/api/weather", async (req, res) => {
 
         if (!response.ok) {
             const errorData =
-                await response.json().catch(() => ({}));
+                await response
+                    .json()
+                    .catch(() => ({}));
 
             return res.status(response.status).json({
                 error:
@@ -161,7 +179,7 @@ app.get("/api/weather", async (req, res) => {
 
 
 // ============================================================
-// CURRENT-LOCATION QUERY DETECTION
+// CURRENT LOCATION QUERY DETECTION
 // ============================================================
 
 function isCurrentLocationQuery(message) {
@@ -354,6 +372,10 @@ Do not mention internal tools, APIs, function calls, or implementation details.
         ];
 
 
+        // ====================================================
+        // WEATHER TOOL
+        // ====================================================
+
         const tools = [
             {
                 type: "function",
@@ -384,6 +406,10 @@ Do not mention internal tools, APIs, function calls, or implementation details.
             },
         ];
 
+
+        // ====================================================
+        // FIRST GROQ REQUEST
+        // ====================================================
 
         const completion =
             await groq.chat.completions.create({
@@ -555,13 +581,38 @@ app.get("/api/test", (req, res) => {
 
 
 // ============================================================
+// ROOT ENDPOINT
+// ============================================================
+
+app.get("/", (req, res) => {
+    res.json({
+        message: "WeatherHub backend is running!",
+        endpoints: {
+            test: "/api/test",
+            weather: "/api/weather",
+            chat: "/api/chat",
+        },
+    });
+});
+
+
+// ============================================================
 // SERVER
 // ============================================================
 
-const PORT = 5000;
+// IMPORTANT:
+// Render provides the PORT through process.env.PORT.
+// Do NOT hard-code port 5000 for production.
 
-app.listen(PORT, () => {
-    console.log(
-        `🚀 Server running on http://localhost:${PORT}`
-    );
-});
+const PORT =
+    process.env.PORT || 5000;
+
+app.listen(
+    PORT,
+    "0.0.0.0",
+    () => {
+        console.log(
+            `🚀 Server running on port ${PORT}`
+        );
+    }
+);

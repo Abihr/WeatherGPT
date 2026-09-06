@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5000";
+const API_URL = import.meta.env.VITE_API_URL;
 
 export async function sendChatMessage(
     message,
@@ -21,7 +21,11 @@ export async function sendChatMessage(
     );
 
     if (!response.ok) {
+        const errorData =
+            await response.json().catch(() => ({}));
+
         throw new Error(
+            errorData.error ||
             "Failed to send message"
         );
     }
